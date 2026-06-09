@@ -18,7 +18,7 @@ URL: https://trip-sathi-gray.vercel.app
 **Shashank Saini**
 
 B.Sc. Computer Science (Hons) 
-Masters of Computer Applications(MCA) 
+, Masters of Computer Applications(MCA) 
 
 ---
 
