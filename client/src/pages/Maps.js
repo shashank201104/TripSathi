@@ -42,7 +42,7 @@ const Maps = () => {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [places, setPlaces] = useState([]);
   const [savedLocations, setSavedLocations] = useState([]);
-  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [, setSelectedPlace] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [radiusKm, setRadiusKm] = useState(5);
   const [sortBy, setSortBy] = useState("distance");

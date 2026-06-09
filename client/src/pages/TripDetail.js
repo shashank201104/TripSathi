@@ -12,7 +12,6 @@ import {
   FaMapMarkedAlt,
   FaUsers,
   FaDollarSign,
-  FaHeart,
   FaShare,
   FaEdit,
   FaTrash,

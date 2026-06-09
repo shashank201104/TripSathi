@@ -2,22 +2,19 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
-import { useNotifications } from "../contexts/NotificationContext";
 import { useApiMutation, useApi } from "../hooks/useApi";
 import { useFormValidation } from "../hooks/useFormValidation";
-import { Button, Input, Card, LoadingSpinner } from "../components/ui";
+import { Button, Input, Card } from "../components/ui";
 import { aiAPI, tripAPI } from "../services/api";
 import TripResultCard from "../components/trip/TripResultCard";
 import TripDetailView from "../components/trip/TripDetailView";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
-  FaPlane,
   FaMapMarkedAlt,
   FaCalendarAlt,
   FaUsers,
   FaDollarSign,
   FaRocket,
-  FaHeart,
   FaMountain,
   FaCity,
   FaUmbrellaBeach,
@@ -31,11 +28,11 @@ import {
   FaArrowLeft,
   FaSpinner,
   FaSave,
+  FaHeart,
 } from "react-icons/fa";
 
 const TripPlanner = () => {
-  const { user, getRemainingAiRequests } = useAuth();
-  const notifications = useNotifications();
+  const { getRemainingAiRequests } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const editTripId = searchParams.get("edit");

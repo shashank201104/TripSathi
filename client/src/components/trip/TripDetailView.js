@@ -10,13 +10,11 @@ import {
   FaDollarSign,
   FaUtensils,
   FaHotel,
-  FaPlane,
   FaStar,
   FaInfoCircle,
   FaChevronDown,
   FaChevronUp,
   FaDownload,
-  FaShare,
   FaTimes,
   FaPlus,
 } from "react-icons/fa";
