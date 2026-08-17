@@ -23,10 +23,16 @@ const app = express();
 const server = http.createServer(app);
 
 // Initialize Socket.IO
+const socketCorsOrigin = process.env.CLIENT_URL || 
+  (process.env.NODE_ENV === "production" 
+    ? ["https://trip-sathi-gray.vercel.app", "https://tripsathi.onrender.com"]
+    : "http://localhost:3000");
+
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: socketCorsOrigin,
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
@@ -78,19 +84,28 @@ const mapRoutes = require("./routes/maps");
 const aiRoutes = require("./routes/ai");
 
 // Enhanced CORS configuration
+const defaultOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
 const corsOptions = {
-  origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+  origin: defaultOrigins,
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   optionsSuccessStatus: 200,
 };
 
-if (process.env.NODE_ENV === "production" && process.env.ALLOWED_ORIGINS) {
+// Load allowed origins from environment
+if (process.env.ALLOWED_ORIGINS) {
   corsOptions.origin = process.env.ALLOWED_ORIGINS.split(",").map((origin) =>
     origin.trim()
   );
   console.log("Allowed Origins:", corsOptions.origin);
+} else if (process.env.NODE_ENV === "production") {
+  // Fallback for production if ALLOWED_ORIGINS is not set
+  corsOptions.origin = [
+    "https://trip-sathi-gray.vercel.app",
+    "https://tripsathi.onrender.com",
+  ];
+  console.log("Using default production origins:", corsOptions.origin);
 }
 
 app.use(cors(corsOptions));
