@@ -40,6 +40,7 @@ const Register = () => {
     useFormValidation(
       { name: "", email: "", password: "", confirmPassword: "" },
       {
+<<<<<<< HEAD
         name: {
           required: true,
           trim: true,
@@ -54,6 +55,21 @@ const Register = () => {
           minLength: NEW_PASSWORD_MIN_LENGTH,
           maxLength: NEW_PASSWORD_MAX_LENGTH,
           validate: validateNewPassword,
+=======
+        name: { required: true, minLength: 2 },
+        email: { required: true, email: true },
+        password: {
+          required: true,
+          validate: (value) => {
+            if (!value) return "Password is required";
+            if (value.length < 8) return "Password must be at least 8 characters";
+            if (!/[a-z]/.test(value)) return "Password must contain at least one lowercase letter";
+            if (!/[A-Z]/.test(value)) return "Password must contain at least one uppercase letter";
+            if (!/\d/.test(value)) return "Password must contain at least one number";
+            if (!/[@$!%*?&]/.test(value)) return "Password must contain at least one special character (@$!%*?&)";
+            return null;
+          },
+>>>>>>> parent of 67cf377 (minor bug fixed)
         },
         confirmPassword: {
           required: true,
@@ -153,10 +169,14 @@ const Register = () => {
                 name="password"
                 type={showPassword ? "text" : "password"}
                 label="Password"
+<<<<<<< HEAD
                 placeholder="Create password"
                 autoComplete="new-password"
                 minLength={NEW_PASSWORD_MIN_LENGTH}
                 maxLength={NEW_PASSWORD_MAX_LENGTH}
+=======
+                placeholder="Min 8 chars: uppercase, lowercase, number, symbol"
+>>>>>>> parent of 67cf377 (minor bug fixed)
                 icon={FaLock}
                 value={values.password}
                 onChange={handleChange}
