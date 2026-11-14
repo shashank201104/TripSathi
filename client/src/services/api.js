@@ -176,6 +176,10 @@ export const userAPI = {
     api.post("/auth/change-password", passwordData),
 };
 
+export const contactAPI = {
+  submit: (message) => api.post("/contact", message),
+};
+
 // Error handling utility
 export const handleApiError = (error) => {
   if (error.response) {

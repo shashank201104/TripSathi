@@ -531,7 +531,7 @@ const TripDetail = () => {
                   (trip.itinerary.days || trip.itinerary.dailyPlans) && (
                     <Card className="px-2 py-3 md:p-6 surface-card rounded-xl md:rounded-2xl">
                       <h2 className="text-lg md:text-2xl font-bold text-text-primary mb-3 md:mb-4 flex items-center">
-                        <FaRoute className="mr-2 md:mr-3 text-purple-600" />
+                        <FaRoute className="mr-2 md:mr-3 text-accent" />
                         Daily Highlights
                       </h2>
                       <div className="space-y-3 md:max-h-96 md:overflow-y-auto md:pr-2">
@@ -557,7 +557,7 @@ const TripDetail = () => {
                                 </p>
                                 {day.activities &&
                                   day.activities.length > 1 && (
-                                    <p className="text-[10px] md:text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                    <p className="text-[10px] md:text-xs text-accent mt-1">
                                       +{day.activities.length - 1} more
                                       activities
                                     </p>
@@ -696,7 +696,7 @@ const TripDetail = () => {
                                   }
                                 )}
                               </span>
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-accent-muted text-accent">
                                 {day.activities?.length || 0} activities
                               </span>
                             </p>
@@ -705,9 +705,9 @@ const TripDetail = () => {
                                 {day.activities.map((activity, actIdx) => (
                                   <div
                                     key={actIdx}
-                                    className="flex items-start text-sm text-gray-700 dark:text-gray-300 pl-2 md:pl-4 border-l-2 border-purple-200 dark:border-purple-800"
+                                    className="flex items-start text-sm text-text-primary pl-2 md:pl-4 border-l-2 border-accent/30"
                                   >
-                                    <FaMapMarkerAlt className="mr-2 mt-1 text-purple-600 flex-shrink-0" />
+                                    <FaMapMarkerAlt className="mr-2 mt-1 text-accent flex-shrink-0" />
                                     <span>
                                       {activity.time && (
                                         <strong>{activity.time}:</strong>
@@ -781,7 +781,7 @@ const TripDetail = () => {
                           {trip.preferences.transport.map((mode, idx) => (
                             <span
                               key={idx}
-                              className="px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-full text-sm font-medium text-gray-800 dark:text-gray-200 capitalize"
+                              className="px-3 py-1 bg-accent-muted rounded-full text-sm font-medium text-text-primary capitalize"
                             >
                               {mode}
                             </span>
@@ -799,7 +799,7 @@ const TripDetail = () => {
                           {trip.preferences.interests.map((interest, idx) => (
                             <span
                               key={idx}
-                              className="px-3 py-1 bg-gradient-to-r from-pink-100 to-purple-100 dark:from-pink-900/30 dark:to-purple-900/30 rounded-full text-sm font-medium text-gray-800 dark:text-gray-200 capitalize"
+                              className="px-3 py-1 bg-accent-muted rounded-full text-sm font-medium text-text-primary capitalize"
                             >
                               {interest}
                             </span>
@@ -873,7 +873,7 @@ const TripDetail = () => {
                               {trip.preferences.interests.map((interest, idx) => (
                                 <span
                                   key={idx}
-                                  className="px-2.5 py-1 bg-gradient-to-r from-pink-100 to-purple-100 dark:from-pink-900/30 dark:to-purple-900/30 rounded-full text-[10px] font-semibold text-gray-800 dark:text-gray-200 capitalize"
+                                  className="px-2.5 py-1 bg-accent-muted rounded-full text-[10px] font-semibold text-text-primary capitalize"
                                 >
                                   {interest}
                                 </span>

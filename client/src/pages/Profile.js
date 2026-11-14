@@ -3,6 +3,11 @@ import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
 import { userAPI } from "../services/api";
+import {
+  NEW_PASSWORD_MAX_LENGTH,
+  NEW_PASSWORD_MIN_LENGTH,
+  validateNewPassword,
+} from "../utils/authValidation";
 import { Card, Button, Input, PageHeader } from "../components/ui";
 import {
   FaUser,
@@ -92,8 +97,18 @@ const Profile = () => {
       return;
     }
 
-    if (passwordData.newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters");
+    if (passwordData.newPassword.length < NEW_PASSWORD_MIN_LENGTH) {
+      toast.error(
+        `New password must be at least ${NEW_PASSWORD_MIN_LENGTH} characters`
+      );
+      return;
+    }
+
+    const passwordValidationError = validateNewPassword(
+      passwordData.newPassword
+    );
+    if (passwordValidationError) {
+      toast.error(passwordValidationError);
       return;
     }
 
@@ -242,6 +257,8 @@ const Profile = () => {
                   type={showPasswords.current ? "text" : "password"}
                   label="Current Password"
                   placeholder="Enter your current password"
+                  autoComplete="current-password"
+                  maxLength={128}
                   icon={FaLock}
                   value={passwordData.currentPassword}
                   onChange={handlePasswordChange}
@@ -262,6 +279,9 @@ const Profile = () => {
                   type={showPasswords.new ? "text" : "password"}
                   label="New Password"
                   placeholder="Enter your new password"
+                  autoComplete="new-password"
+                  minLength={NEW_PASSWORD_MIN_LENGTH}
+                  maxLength={NEW_PASSWORD_MAX_LENGTH}
                   icon={FaLock}
                   value={passwordData.newPassword}
                   onChange={handlePasswordChange}
@@ -276,12 +296,19 @@ const Profile = () => {
                     </button>
                   }
                 />
+                <p className="text-xs text-text-secondary">
+                  Use at least {NEW_PASSWORD_MIN_LENGTH} characters. Spaces and
+                  passphrases are allowed; maximum {NEW_PASSWORD_MAX_LENGTH} UTF-8 bytes.
+                </p>
 
                 <Input
                   name="confirmPassword"
                   type={showPasswords.confirm ? "text" : "password"}
                   label="Confirm New Password"
                   placeholder="Confirm your new password"
+                  autoComplete="new-password"
+                  minLength={NEW_PASSWORD_MIN_LENGTH}
+                  maxLength={NEW_PASSWORD_MAX_LENGTH}
                   icon={FaLock}
                   value={passwordData.confirmPassword}
                   onChange={handlePasswordChange}

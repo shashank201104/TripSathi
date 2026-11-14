@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext";
-import { ThemeToggle } from "../ui";
 import {
   FaBars,
   FaTimes,
@@ -28,6 +27,11 @@ const Navbar = () => {
     { name: "Maps", href: "/maps", icon: FaMapMarkedAlt },
   ];
 
+  const publicNavigation = [
+    { name: "Destinations", href: "/destinations/" },
+    { name: "Travel Guides", href: "/blog/" },
+  ];
+
   const handleLogout = async () => {
     await logout();
     setIsOpen(false);
@@ -44,21 +48,29 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent-muted border border-accent/20 group-hover:border-accent/40 transition-colors">
-              <FaRoute className="h-4 w-4 text-accent" />
-            </div>
             <div className="flex flex-col">
-              <span className="text-base font-display font-bold text-text-primary leading-none">
+              <span className="text-lg font-display font-bold text-accent leading-none">
                 TripSathi
-              </span>
-              <span className="text-[10px] font-mono text-text-secondary tracking-wider uppercase">
-                Travel OS
               </span>
             </div>
           </Link>
 
-          {isAuthenticated && (
-            <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-1">
+            {publicNavigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`relative flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                  isActive(item.href)
+                    ? "text-accent"
+                    : "text-text-secondary hover:text-text-primary hover:bg-accent-muted"
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
+            {isAuthenticated && (
+              <>
               {userNavigation.map((item) => (
                 <Link
                   key={item.name}
@@ -79,12 +91,11 @@ const Navbar = () => {
                   )}
                 </Link>
               ))}
-            </div>
-          )}
+              </>
+            )}
+          </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <ThemeToggle />
-
             {isAuthenticated ? (
               <>
                 {user?.planType === "free" && (
@@ -165,17 +176,15 @@ const Navbar = () => {
             )}
           </div>
 
-          <div className="md:hidden flex items-center gap-2">
-            <ThemeToggle />
-            {location.pathname !== "/" && (
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-text-secondary hover:bg-accent-muted transition-colors"
-                aria-label="Toggle menu"
-              >
-                {isOpen ? <FaTimes className="h-5 w-5" /> : <FaBars className="h-5 w-5" />}
-              </button>
-            )}
+          <div className="md:hidden flex items-center gap-1">
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="min-h-[44px] min-w-[40px] flex items-center justify-center rounded-lg text-accent hover:bg-accent-muted transition-colors"
+              aria-label="Toggle menu"
+              aria-expanded={isOpen}
+            >
+              {isOpen ? <FaTimes className="h-5 w-5" /> : <FaBars className="h-5 w-5" />}
+            </button>
           </div>
         </div>
       </div>
@@ -189,6 +198,21 @@ const Navbar = () => {
             className="md:hidden border-t border-border bg-surface"
           >
             <div className="px-4 py-3 space-y-1">
+              {publicNavigation.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`block px-3 py-2.5 text-base font-medium rounded-md transition-colors ${
+                    isActive(item.href)
+                      ? "text-accent bg-accent-muted"
+                      : "text-text-secondary hover:text-text-primary hover:bg-accent-muted"
+                  }`}
+                  onClick={() => setIsOpen(false)}
+                >
+                  {item.name}
+                </Link>
+              ))}
+
               {isAuthenticated &&
                 [...userNavigation, { name: "Profile", href: "/profile", icon: FaUser }].map(
                   (item) => (

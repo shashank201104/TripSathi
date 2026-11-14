@@ -30,6 +30,7 @@ const register = async (req, res) => {
       password,
       phone,
       terms,
+      privacyPolicyAccepted,
       dateOfBirth,
       newsletter = false,
     } = req.body;
@@ -56,9 +57,8 @@ const register = async (req, res) => {
       phone: phone?.trim(),
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
       newsletter,
-      termsAccepted: true,
-      privacyPolicyAccepted: true,
-      dataProcessingConsent: true,
+      termsAccepted: terms === true,
+      privacyPolicyAccepted: privacyPolicyAccepted === true,
       createdFrom: "web",
     });
 

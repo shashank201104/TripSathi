@@ -15,7 +15,6 @@ const connectDB = async () => {
     }
 
     await mongoose.connect(mongoURI);
-    console.log("MongoDB connected successfully");
   } catch (error) {
     console.error("MongoDB connection error:", error.message);
     process.exit(1);
@@ -68,7 +67,6 @@ const runMigration = async () => {
     await connectDB();
     await migrateTripsStatus();
     await mongoose.connection.close();
-    console.log("\nDatabase connection closed.");
     process.exit(0);
   } catch (error) {
     console.error("Migration failed:", error);

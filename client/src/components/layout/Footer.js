@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FaTwitter, FaInstagram, FaLinkedin, FaShieldAlt, FaRocket } from "react-icons/fa";
+import { FaShieldAlt, FaRocket } from "react-icons/fa";
 
 const Footer = () => {
   return (
@@ -23,27 +23,15 @@ const Footer = () => {
             <p className="text-sm text-text-secondary leading-relaxed mb-4">
               Your intelligent travel companion. Plan smarter, explore better.
             </p>
-            <div className="hidden md:flex gap-3">
-              {[FaTwitter, FaInstagram, FaLinkedin].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="w-10 h-10 rounded-lg bg-surface-elevated border border-border flex items-center justify-center text-text-secondary hover:text-accent hover:border-accent/30 transition-all"
-                >
-                  <Icon className="h-4 w-4" />
-                </a>
-              ))}
-            </div>
           </div>
 
           <div>
             <h4 className="section-label mb-4">Quick Links</h4>
             <div className="space-y-1">
               {[
-                { name: "Dashboard", to: "/dashboard" },
-                { name: "Trip Planner", to: "/trip-planner" },
-                { name: "Maps", to: "/maps" },
-                { name: "My Trips", to: "/trips" },
+                { name: "Destinations", to: "/destinations/" },
+                { name: "Travel Guides", to: "/blog/" },
+                { name: "Plan a Trip", to: "/plan/" },
               ].map((link) => (
                 <Link
                   key={link.name}
@@ -60,10 +48,9 @@ const Footer = () => {
             <h4 className="section-label mb-4">Resources</h4>
             <div className="space-y-1">
               {[
-                { name: "About Project", to: "/about" },
-                { name: "How It Works", to: "/about" },
-                { name: "Contact", to: "/contact" },
-                { name: "Privacy Policy", to: "/privacy" },
+                { name: "About TripSathi", to: "/about/" },
+                { name: "Contact", to: "/contact/" },
+                { name: "Privacy Policy", to: "/privacy/" },
               ].map((item) => (
                 <Link
                   key={item.name}

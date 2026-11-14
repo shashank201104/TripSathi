@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { EMAIL_PATTERN } from "../utils/authValidation";
 
 // Form validation hook with simple rule objects
 export const useFormValidation = (initialValues, validationRules) => {
@@ -10,6 +11,8 @@ export const useFormValidation = (initialValues, validationRules) => {
     (fieldName, value, currentValues = values) => {
       const rules = validationRules[fieldName];
       if (!rules) return null;
+      const valueToValidate =
+        rules.trim && typeof value === "string" ? value.trim() : value;
 
       // Safety check for currentValues
       if (!currentValues || typeof currentValues !== "object") {
@@ -20,14 +23,17 @@ export const useFormValidation = (initialValues, validationRules) => {
       if (rules.required) {
         // Handle boolean fields (like checkboxes)
         if (typeof value === "boolean") {
-          if (!value) {
+          if (!valueToValidate) {
             return `${
               fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
             } is required`;
           }
         } else {
           // Handle string/text fields
-          if (!value || value.toString().trim() === "") {
+          if (
+            !valueToValidate ||
+            valueToValidate.toString().trim() === ""
+          ) {
             return `${
               fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
             } is required`;
@@ -36,29 +42,40 @@ export const useFormValidation = (initialValues, validationRules) => {
       }
 
       // Email validation
-      if (rules.email && value) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(value)) {
+      if (rules.email && valueToValidate) {
+        if (!EMAIL_PATTERN.test(valueToValidate)) {
           return "Please enter a valid email address";
         }
       }
 
       // Min length validation
-      if (rules.minLength && value && value.length < rules.minLength) {
+      if (
+        rules.minLength &&
+        valueToValidate &&
+        valueToValidate.length < rules.minLength
+      ) {
         return `${
           fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
         } must be at least ${rules.minLength} characters`;
       }
 
       // Max length validation
-      if (rules.maxLength && value && value.length > rules.maxLength) {
+      if (
+        rules.maxLength &&
+        valueToValidate &&
+        valueToValidate.length > rules.maxLength
+      ) {
         return `${
           fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
         } must be no more than ${rules.maxLength} characters`;
       }
 
       // Pattern validation
-      if (rules.pattern && value && !rules.pattern.test(value)) {
+      if (
+        rules.pattern &&
+        valueToValidate &&
+        !rules.pattern.test(valueToValidate)
+      ) {
         return (
           rules.message ||
           `${
@@ -70,7 +87,7 @@ export const useFormValidation = (initialValues, validationRules) => {
       // Custom validation function
       if (rules.validate && typeof rules.validate === "function") {
         try {
-          return rules.validate(value, currentValues);
+          return rules.validate(valueToValidate, currentValues);
         } catch (e) {
           // Return null if validation fails due to initialization issues
           return null;

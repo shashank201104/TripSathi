@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import api from "../services/api";
+import { trackEvent } from "../components/seo/Analytics";
 
 const AuthContext = createContext();
 
@@ -113,7 +114,11 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: "AUTH_START" });
       const response = await api.post("/auth/login", { email, password });
 
-      const { user, token } = response.data;
+      const { user } = response.data;
+      const token = response.data.accessToken || response.data.token;
+      if (!token) {
+        throw new Error("The authentication response did not include an access token.");
+      }
       
       if (token) {
         localStorage.setItem("token", token);
@@ -124,13 +129,15 @@ export const AuthProvider = ({ children }) => {
         payload: { user, token },
       });
 
+      trackEvent("login");
       toast.success("Login successful!");
       navigate("/dashboard");
 
       return { success: true };
     } catch (error) {
       dispatch({ type: "AUTH_FAIL" });
-      const message = error.response?.data?.message || "Login failed";
+      const message =
+        error.response?.data?.message || error.message || "Login failed";
       toast.error(message);
       return { success: false, message };
     }
@@ -141,7 +148,11 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: "AUTH_START" });
       const response = await api.post("/auth/register", userData);
 
-      const { user, token } = response.data;
+      const { user } = response.data;
+      const token = response.data.accessToken || response.data.token;
+      if (!token) {
+        throw new Error("The authentication response did not include an access token.");
+      }
       
       if (token) {
         localStorage.setItem("token", token);
@@ -152,13 +163,15 @@ export const AuthProvider = ({ children }) => {
         payload: { user, token },
       });
 
+      trackEvent("sign_up");
       toast.success("Registration successful!");
       navigate("/dashboard");
 
       return { success: true };
     } catch (error) {
       dispatch({ type: "AUTH_FAIL" });
-      const message = error.response?.data?.message || "Registration failed";
+      const message =
+        error.response?.data?.message || error.message || "Registration failed";
       toast.error(message);
       return { success: false, message };
     }

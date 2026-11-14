@@ -17,6 +17,13 @@ const {
   checkAccountStatus,
   userRateLimit,
 } = require("../middleware/auth");
+const {
+  EMAIL_PATTERN,
+  NAME_PATTERN,
+  NEW_PASSWORD_MAX_LENGTH,
+  NEW_PASSWORD_MIN_LENGTH,
+  isValidNewPassword,
+} = require("../utils/authValidation");
 
 const router = express.Router();
 
@@ -46,23 +53,40 @@ const strictAuthLimiter = rateLimit({
 // Registration validation rules
 const registerValidation = [
   body("name")
+    .isString()
+    .withMessage("Name must be text")
+    .bail()
     .trim()
     .isLength({ min: 2, max: 50 })
-    .matches(/^[a-zA-Z\s'-]+$/)
+    .matches(NAME_PATTERN)
     .withMessage(
-      "Name must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes"
+      "Name must be 2-50 characters and contain letters separated by spaces, hyphens, or apostrophes"
     ),
   body("email")
+    .isString()
+    .withMessage("Email must be text")
+    .bail()
+    .trim()
     .isEmail()
-    .normalizeEmail()
+    .matches(EMAIL_PATTERN)
     .isLength({ max: 254 })
+    .toLowerCase()
     .withMessage("Please provide a valid email address"),
   body("password")
-    .isLength({ min: 8, max: 128 })
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+    .isString()
+    .withMessage("Password must be text")
+    .bail()
+    .isLength({
+      min: NEW_PASSWORD_MIN_LENGTH,
+      max: NEW_PASSWORD_MAX_LENGTH,
+    })
+    .custom(isValidNewPassword)
     .withMessage(
-      "Password must be at least 8 characters with uppercase, lowercase, number, and special character"
+      `Password must be at least ${NEW_PASSWORD_MIN_LENGTH} characters and no more than ${NEW_PASSWORD_MAX_LENGTH} UTF-8 bytes`
     ),
+  body("privacyPolicyAccepted")
+    .custom((value) => value === true)
+    .withMessage("You must accept the Privacy Policy to create an account"),
 
   body("phone")
     .optional()
@@ -77,19 +101,36 @@ const registerValidation = [
 // Login validation rules
 const loginValidation = [
   body("email")
+    .isString()
+    .withMessage("Email must be text")
+    .bail()
+    .trim()
     .isEmail()
-    .normalizeEmail()
+    .matches(EMAIL_PATTERN)
+    .isLength({ max: 254 })
+    .toLowerCase()
     .withMessage("Please provide a valid email"),
-  body("password").notEmpty().withMessage("Password is required"),
+  body("password")
+    .isString()
+    .withMessage("Password must be text")
+    .bail()
+    .isLength({ min: 8, max: 128 })
+    .withMessage("Password must be between 8 and 128 characters"),
 ];
 
 // Password reset validation
 const passwordResetValidation = [
   body("password")
-    .isLength({ min: 8, max: 128 })
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .isString()
+    .withMessage("Password must be text")
+    .bail()
+    .isLength({
+      min: NEW_PASSWORD_MIN_LENGTH,
+      max: NEW_PASSWORD_MAX_LENGTH,
+    })
+    .custom(isValidNewPassword)
     .withMessage(
-      "Password must be 8+ characters with uppercase, lowercase, number, and special character"
+      `Password must be at least ${NEW_PASSWORD_MIN_LENGTH} characters and no more than ${NEW_PASSWORD_MAX_LENGTH} UTF-8 bytes`
     ),
 ];
 
@@ -97,14 +138,25 @@ const passwordResetValidation = [
 const profileUpdateValidation = [
   body("name")
     .optional()
+    .isString()
+    .withMessage("Name must be text")
+    .bail()
     .trim()
     .isLength({ min: 2, max: 50 })
-    .matches(/^[a-zA-Z\s'-]+$/)
-    .withMessage("Name must be 2-50 characters and contain only letters"),
+    .matches(NAME_PATTERN)
+    .withMessage(
+      "Name must be 2-50 characters and contain letters separated by spaces, hyphens, or apostrophes"
+    ),
   body("email")
     .optional()
+    .isString()
+    .withMessage("Email must be text")
+    .bail()
+    .trim()
     .isEmail()
-    .normalizeEmail()
+    .matches(EMAIL_PATTERN)
+    .isLength({ max: 254 })
+    .toLowerCase()
     .withMessage("Please provide a valid email"),
   body("phone")
     .optional()
@@ -174,15 +226,22 @@ router.post(
   strictAuthLimiter,
   [
     body("currentPassword")
-      .notEmpty()
-      .withMessage("Current password is required"),
-    body("newPassword")
+      .isString()
+      .withMessage("Current password must be text")
+      .bail()
       .isLength({ min: 8, max: 128 })
-      .matches(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/
-      )
+      .withMessage("Current password must be between 8 and 128 characters"),
+    body("newPassword")
+      .isString()
+      .withMessage("New password must be text")
+      .bail()
+      .isLength({
+        min: NEW_PASSWORD_MIN_LENGTH,
+        max: NEW_PASSWORD_MAX_LENGTH,
+      })
+      .custom(isValidNewPassword)
       .withMessage(
-        "New password must be 8+ characters with uppercase, lowercase, number, and special character"
+        `New password must be at least ${NEW_PASSWORD_MIN_LENGTH} characters and no more than ${NEW_PASSWORD_MAX_LENGTH} UTF-8 bytes`
       ),
   ],
   changePassword

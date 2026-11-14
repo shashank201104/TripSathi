@@ -3,16 +3,22 @@ const { logger } = require("../middleware/logging");
 
 // Helper to wait (simple backoff)
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+const OVERPASS_URLS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+];
 
+const formatDistance = (distanceKm) =>
+  distanceKm < 1
+    ? `${Math.round(distanceKm * 1000)} m`
+    : `${distanceKm.toFixed(1)} km`;
 class FreeMapService {
   constructor() {
     this.nominatimBase = "https://nominatim.openstreetmap.org";
-    this.overpassUrl = "https://overpass-api.de/api/interpreter";
     this.osrmBase = "https://router.project-osrm.org"; // Public OSRM instance
     // Nominatim requires descriptive User-Agent
     this.userAgent =
-      process.env.MAPS_USER_AGENT ||
-      "TripSathi/1.0 (TripSathi Project )";
+      process.env.MAPS_USER_AGENT || "TripSathi/1.0 (TripSathi Project )";
     this.referer = "http://localhost:3000";
   }
 
@@ -52,7 +58,7 @@ class FreeMapService {
     try {
       // Add delay to respect Nominatim's usage policy (max 1 request per second)
       await sleep(1500); // Increased to 1.5 seconds for safety
-      
+
       let response;
       try {
         // Try Nominatim first
@@ -84,12 +90,12 @@ class FreeMapService {
           throw nominatimError;
         }
       }
-      
+
       if (!response.data || response.data.length === 0) {
         logger.warn(`No geocode results for: ${address}`);
         throw new Error("No results found");
       }
-      
+
       const r = response.data[0];
       const result = {
         formatted_address: r.display_name,
@@ -165,52 +171,146 @@ class FreeMapService {
   }
 
   // Nearby search using Overpass (node + ways around center)
-  async nearbySearch(location, radius = 5000, type = null, keyword = null) {
-    try {
-      const [lat, lng] = location.split(",").map(parseFloat);
-      const filter = type ? this.buildOverpassFilter(type) : "[amenity]";
-      const keywordFilter = keyword ? `['name'~'${keyword}',i]` : "";
-      // Overpass QL query
-      const query = `[out:json][timeout:25];(node(around:${radius},${lat},${lng})${filter}${keywordFilter};way(around:${radius},${lat},${lng})${filter}${keywordFilter};);out center 40;`;
+  async nearbySearch({ lat, lng, type = "tourist_attraction", radius = 5000 }) {
+    const latitude = Number(lat);
+    const longitude = Number(lng);
+    const searchRadius = Number(radius);
 
-      const response = await axios.post(
-        this.overpassUrl,
-        `data=${encodeURIComponent(query)}`,
-        { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+    if (
+      !this.validateCoordinates(latitude, longitude) ||
+      !Number.isFinite(searchRadius) ||
+      searchRadius < 100 ||
+      searchRadius > 50000
+    ) {
+      throw new Error("Invalid latitude, longitude or radius");
+    }
+
+    let filters;
+
+    switch (type) {
+      case "restaurant":
+        filters = `
+            nwr["amenity"="restaurant"](around:${searchRadius},${latitude},${longitude});
+            nwr["amenity"="cafe"](around:${searchRadius},${latitude},${longitude});
+            nwr["amenity"="fast_food"](around:${searchRadius},${latitude},${longitude});
+          `;
+        break;
+
+      case "hotel":
+      case "lodging":
+        filters = `
+            nwr["tourism"="hotel"](around:${searchRadius},${latitude},${longitude});
+            nwr["tourism"="guest_house"](around:${searchRadius},${latitude},${longitude});
+            nwr["tourism"="hostel"](around:${searchRadius},${latitude},${longitude});
+          `;
+        break;
+
+      case "tourist_attraction":
+      case "attraction":
+      default:
+        filters = `
+            nwr["tourism"="attraction"](around:${searchRadius},${latitude},${longitude});
+            nwr["tourism"="museum"](around:${searchRadius},${latitude},${longitude});
+            nwr["tourism"="gallery"](around:${searchRadius},${latitude},${longitude});
+            nwr["tourism"="viewpoint"](around:${searchRadius},${latitude},${longitude});
+            nwr["historic"](around:${searchRadius},${latitude},${longitude});
+            nwr["leisure"="park"](around:${searchRadius},${latitude},${longitude});
+          `;
+        break;
+    }
+
+    const query = `
+      [out:json][timeout:20];
+      (
+        ${filters}
       );
+      out center tags;
+    `;
+    const requestBody = new URLSearchParams({ data: query }).toString();
+    let response;
+    let lastError;
 
-      const elements = response.data.elements || [];
-      const results = elements
-        .filter((el) => el.tags && el.tags.name)
-        .map((el) => ({
-          place_id: el.id,
-          name: el.tags.name,
-          vicinity:
-            [el.tags.addr_full, el.tags.addr_city, el.tags.addr_state]
-              .filter(Boolean)
-              .join(", ") || "",
+    for (const url of OVERPASS_URLS) {
+      try {
+        response = await axios.post(url, requestBody, {
+          headers: {
+            "User-Agent": this.userAgent,
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          timeout: 15000,
+        });
+        break;
+      } catch (error) {
+        lastError = error;
+        logger.warn("Overpass request failed; trying next provider", {
+          provider: url,
+          status: error.response?.status,
+          message: error.message,
+        });
+      }
+    }
+
+    if (!response) {
+      throw lastError || new Error("All Overpass providers failed");
+    }
+
+    const elements = response.data?.elements || [];
+    return elements
+      .map((element) => {
+        const tags = element.tags || {};
+        const placeLat = element.lat ?? element.center?.lat;
+        const placeLng = element.lon ?? element.center?.lon;
+
+        if (
+          !Number.isFinite(Number(placeLat)) ||
+          !Number.isFinite(Number(placeLng))
+        ) {
+          return null;
+        }
+
+        const latitudeOfPlace = Number(placeLat);
+        const longitudeOfPlace = Number(placeLng);
+        const distance = this.calculateDistance(
+          latitude,
+          longitude,
+          latitudeOfPlace,
+          longitudeOfPlace
+        );
+        const vicinity = [
+          tags["addr:housenumber"],
+          tags["addr:street"],
+          tags["addr:city"],
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+        return {
+          place_id: `${element.type}-${element.id}`,
+          name: tags.name || tags["name:en"] || "Unnamed place",
+          vicinity,
           geometry: {
             location: {
-              lat: el.lat || el.center?.lat,
-              lng: el.lon || el.center?.lon,
+              lat: latitudeOfPlace,
+              lng: longitudeOfPlace,
             },
           },
           rating: null,
           price_level: null,
-          types: Object.keys(el.tags).filter((k) => !k.startsWith("addr")),
-          opening_hours: null,
+          types: Object.keys(tags).filter((key) => !key.startsWith("addr:")),
+          opening_hours: tags.opening_hours || null,
           photos: [],
-        }));
-
-      const payload = {
-        results,
-        status: results.length ? "OK" : "ZERO_RESULTS",
-      };
-      return payload;
-    } catch (err) {
-      logger.error("Free nearby search error", err.message);
-      return { results: [], status: "ERROR" };
-    }
+          distance,
+          formattedDistance: formatDistance(distance),
+          phone: tags.phone || tags["contact:phone"] || null,
+          website: tags.website || tags["contact:website"] || null,
+          cuisine: tags.cuisine || null,
+          description: tags.description || null,
+          source: "OpenStreetMap",
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.distance - b.distance);
   }
 
   // Text search using Nominatim (broader than nearby)

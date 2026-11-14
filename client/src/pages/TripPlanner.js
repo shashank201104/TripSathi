@@ -9,6 +9,7 @@ import { aiAPI, tripAPI } from "../services/api";
 import TripResultCard from "../components/trip/TripResultCard";
 import TripDetailView from "../components/trip/TripDetailView";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { trackEvent } from "../components/seo/Analytics";
 import {
   FaMapMarkedAlt,
   FaCalendarAlt,
@@ -42,20 +43,35 @@ const TripPlanner = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [showDetailView, setShowDetailView] = useState(false);
+  const requestedTravelers = Number(searchParams.get("travelers"));
+  const pendingTripKey = "tripsathi-pending-itinerary";
 
-  const { values, errors, handleChange, handleBlur, isValid, setValues } =
+  const {
+    values,
+    errors,
+    handleChange,
+    handleBlur,
+    isValid,
+    validateAll,
+    setValues,
+  } =
     useFormValidation(
       {
-        destination: "",
-        startDate: "",
+        destination: searchParams.get("destination") || "",
+        startDate: searchParams.get("startDate") || "",
         endDate: "",
-        travelers: 2,
+        travelers:
+          Number.isInteger(requestedTravelers) &&
+          requestedTravelers >= 1 &&
+          requestedTravelers <= 20
+            ? requestedTravelers
+            : 2,
         budget: "",
         interests: [],
         travelStyle: "",
         accommodationType: "",
         transportation: "",
-        specialRequests: "",
+        specialRequests: searchParams.get("prompt") || "",
       },
       {
         destination: { required: true, minLength: 3 },
@@ -67,12 +83,57 @@ const TripPlanner = () => {
       }
     );
 
+  const startDateIsValid =
+    values.startDate &&
+    values.startDate >= new Date().toISOString().split("T")[0];
+  const endDateIsValid =
+    values.endDate && values.startDate && values.endDate >= values.startDate;
+  const travelersAreValid =
+    Number.isInteger(Number(values.travelers)) &&
+    Number(values.travelers) >= 1 &&
+    Number(values.travelers) <= 20;
+  const canContinueFromBasics =
+    values.destination.trim().length >= 3 &&
+    startDateIsValid &&
+    endDateIsValid &&
+    travelersAreValid &&
+    Boolean(values.budget);
+  const endDateError =
+    errors.endDate ||
+    (values.endDate && values.startDate && values.endDate < values.startDate
+      ? "End date must be on or after the start date"
+      : undefined);
+
   // Load trip data for editing
   const { data: editTrip } = useApi(
     ["trip", editTripId],
     () => tripAPI.getTripById(editTripId).then((res) => res.data.trip),
     { enabled: !!editTripId }
   );
+
+  useEffect(() => {
+    if (editTripId || searchParams.get("restore") !== "1") return;
+    try {
+      const storedDraft = sessionStorage.getItem(pendingTripKey);
+      if (!storedDraft) return;
+      const parsedDraft = JSON.parse(storedDraft);
+      if (
+        !parsedDraft.values ||
+        !Number.isFinite(parsedDraft.savedAt) ||
+        Date.now() - parsedDraft.savedAt > 60 * 60 * 1000
+      ) {
+        sessionStorage.removeItem(pendingTripKey);
+        toast.error("Your saved trip details expired. Please enter them again.");
+        return;
+      }
+      setValues((current) => ({ ...current, ...parsedDraft.values }));
+      toast.success("Your trip details have been restored.");
+    } catch (error) {
+      sessionStorage.removeItem(pendingTripKey);
+      console.error("Could not restore saved trip details:", error);
+      toast.error("Saved trip details could not be restored. Please enter them again.");
+    }
+  }, [editTripId, searchParams, setValues]);
 
   // Autofill form when editing
   useEffect(() => {
@@ -175,11 +236,12 @@ const TripPlanner = () => {
   };
 
   const handleGenerateItinerary = async () => {
-    if (!isValid) {
+    if (!validateAll() || !canContinueFromBasics) {
       toast.error("Please fill in all required fields.");
       return;
     }
 
+    trackEvent("itinerary_generation_start");
     setIsGenerating(true);
     try {
       // Calculate duration in days
@@ -221,8 +283,16 @@ const TripPlanner = () => {
       };
 
       await generateItinerary.mutateAsync(itineraryData);
+      try {
+        sessionStorage.removeItem(pendingTripKey);
+      } catch (storageError) {
+        console.error("Could not clear the temporary trip draft:", storageError);
+        toast.error("Itinerary generated, but temporary trip details remain in this browser.");
+      }
+      trackEvent("itinerary_generation_success");
     } catch (error) {
       console.error("Error generating itinerary:", error);
+      trackEvent("itinerary_generation_failure");
     } finally {
       setIsGenerating(false);
     }
@@ -306,6 +376,14 @@ const TripPlanner = () => {
   };
 
   const nextStep = () => {
+    if (currentStep === 1 && !canContinueFromBasics) {
+      toast.error("Add a destination, valid dates, travelers, and budget to continue.");
+      return;
+    }
+    if (currentStep === 2 && !values.travelStyle) {
+      toast.error("Choose a travel style to continue.");
+      return;
+    }
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
@@ -370,7 +448,7 @@ const TripPlanner = () => {
               <div className="flex items-end justify-between mb-3">
                 <div>
                   <div className="flex items-center space-x-2 mb-1">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-accent dark:bg-blue-900/30 dark:text-blue-400">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent-muted text-[10px] font-bold text-accent">
                       {currentStep}
                     </span>
                     <span className="text-xs font-semibold text-accent uppercase tracking-wider">
@@ -463,7 +541,7 @@ const TripPlanner = () => {
               animate={{ opacity: 1, x: 0 }}
               className="space-y-6"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
                 <Input
                   name="destination"
                   label="Where do you want to go?"
@@ -473,6 +551,8 @@ const TripPlanner = () => {
                   onChange={handleChange}
                   onBlur={handleBlur}
                   error={errors.destination}
+                  helperText="A city or region works best—for example, Kyoto, Japan."
+                  wrapperClassName="md:col-span-2"
                   required
                 />
 
@@ -482,6 +562,7 @@ const TripPlanner = () => {
                   min="1"
                   max="20"
                   label="Number of travelers"
+                  helperText="Include everyone traveling, from 1 to 20."
                   icon={FaUsers}
                   value={values.travelers}
                   onChange={handleChange}
@@ -511,14 +592,14 @@ const TripPlanner = () => {
                   value={values.endDate}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  error={errors.endDate}
+                  error={endDateError}
                   min={values.startDate}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-text-secondary">
                   Budget per person (INR)
                 </label>
                 <select
@@ -526,7 +607,7 @@ const TripPlanner = () => {
                   value={values.budget}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className="input"
                   required
                 >
                   <option value="">Select your budget</option>
@@ -536,9 +617,10 @@ const TripPlanner = () => {
                   </option>
                   <option value="luxury">₹240,000+ (Luxury)</option>
                 </select>
-                {errors.budget && (
-                  <p className="mt-1 text-sm text-red-600">{errors.budget}</p>
-                )}
+                {errors.budget && <p className="mt-1 text-sm text-error">{errors.budget}</p>}
+                <p className="mt-2 text-xs text-text-secondary">
+                  Choose a total trip budget range; the itinerary is tailored to your group.
+                </p>
               </div>
             </motion.div>
           )}
@@ -555,25 +637,29 @@ const TripPlanner = () => {
                 <h3 className="text-lg md:text-xl font-bold text-text-primary mb-3 md:mb-5">
                   What are your interests?
                 </h3>
+                <p className="mb-3 text-sm text-text-secondary">
+                  Select any that sound good. We’ll use them to shape your days.
+                </p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
                   {interestOptions.map((interest) => (
                     <motion.button
                       key={interest.id}
                       type="button"
                       onClick={() => handleInterestChange(interest.id)}
+                      aria-pressed={values.interests?.includes(interest.id)}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.95 }}
                       className={`p-3 md:p-4 rounded-xl border-2 transition-all duration-300 text-center min-h-[44px] ${
                         values.interests?.includes(interest.id)
                           ? "border-transparent bg-accent text-bg shadow-glow"
-                          : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md"
+                          : "border-border bg-surface text-text-primary hover:border-accent/50 hover:shadow-md"
                       }`}
                     >
                       <interest.icon
                         className={`h-5 w-5 md:h-7 md:w-7 mx-auto mb-1 md:mb-2 ${
                           values.interests?.includes(interest.id)
                             ? "text-white"
-                            : "text-gray-400"
+                            : "text-text-secondary"
                         }`}
                       />
                       <span className="text-[10px] md:text-xs font-semibold">
@@ -589,6 +675,9 @@ const TripPlanner = () => {
                 <h3 className="text-lg md:text-xl font-bold text-text-primary mb-3 md:mb-5">
                   Travel Style
                 </h3>
+                <p className="mb-3 text-sm text-text-secondary">
+                  Pick the pace and comfort level that feels right for this trip.
+                </p>
                 <div className="grid grid-cols-2 gap-3 md:gap-4">
                   {travelStyles.map((style) => (
                     <motion.button
@@ -600,18 +689,19 @@ const TripPlanner = () => {
                           travelStyle: style.id,
                         }))
                       }
+                      aria-pressed={values.travelStyle === style.id}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       className={`p-2 md:p-5 rounded-xl border-2 transition-all duration-300 text-left min-h-[44px] ${
                         values.travelStyle === style.id
                           ? "border-transparent bg-accent text-bg shadow-glow"
-                          : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md"
+                          : "border-border bg-surface hover:border-accent/50 hover:shadow-md"
                       }`}
                     >
                       <h4
                         className={`font-bold text-base md:text-lg mb-0.5 md:mb-1 ${
                           values.travelStyle === style.id
-                            ? "text-white"
+                            ? "text-bg"
                             : "text-text-primary"
                         }`}
                       >
@@ -620,7 +710,7 @@ const TripPlanner = () => {
                       <p
                         className={`text-xs md:text-sm ${
                           values.travelStyle === style.id
-                            ? "text-blue-100"
+                            ? "text-bg/80"
                             : "text-gray-500 dark:text-gray-400"
                         }`}
                       >
@@ -634,14 +724,14 @@ const TripPlanner = () => {
               {/* Accommodation & Transportation */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-text-secondary">
                     Accommodation Type
                   </label>
                   <select
                     name="accommodationType"
                     value={values.accommodationType}
                     onChange={handleChange}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-h-[44px]"
+                    className="input"
                   >
                     <option value="">Any preference</option>
                     {accommodationTypes.map((type) => (
@@ -653,14 +743,14 @@ const TripPlanner = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-text-secondary">
                     Transportation
                   </label>
                   <select
                     name="transportation"
                     value={values.transportation}
                     onChange={handleChange}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-h-[44px]"
+                    className="input"
                   >
                     <option value="">Any preference</option>
                     {transportationOptions.map((transport) => (
@@ -674,7 +764,7 @@ const TripPlanner = () => {
 
               {/* Special Requests */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-text-secondary">
                   Special Requests (Optional)
                 </label>
                 <textarea
@@ -683,7 +773,7 @@ const TripPlanner = () => {
                   onChange={handleChange}
                   placeholder="Any special requirements, accessibility needs, or specific preferences..."
                   rows={4}
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className="input"
                 />
               </div>
             </motion.div>
@@ -802,7 +892,7 @@ const TripPlanner = () => {
                   variant="outline"
                   onClick={prevStep}
                   disabled={currentStep === 1}
-                  className="w-full px-3 md:px-6 py-2.5 md:py-3 rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 font-semibold text-sm md:text-base min-h-[44px] flex items-center justify-center"
+                  className="w-full px-3 md:px-6 py-2.5 md:py-3 rounded-xl border-2 border-gray-300 hover:border-accent font-semibold text-sm md:text-base min-h-[44px] flex items-center justify-center"
                 >
                   <FaArrowLeft className="mr-2 shrink-0" />
                   Previous
@@ -817,7 +907,8 @@ const TripPlanner = () => {
                 <Button
                   onClick={currentStep === 3 ? handleSaveDraft : nextStep}
                   disabled={
-                    (currentStep === 1 && !values.destination) ||
+                    (currentStep === 1 && !canContinueFromBasics) ||
+                    (currentStep === 2 && !values.travelStyle) ||
                     (currentStep === 3 && (isGenerating || isSavingDraft))
                   }
                   loading={currentStep === 3 && isSavingDraft}

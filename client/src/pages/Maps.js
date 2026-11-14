@@ -29,6 +29,62 @@ L.Icon.Default.mergeOptions({
 
 const defaultCenter = { lat: 28.6139, lng: 77.209 }; // Delhi
 
+const getPlacePosition = (place) => {
+  const coordinates = place?.geometry?.location;
+  if (
+    coordinates?.lat === null ||
+    coordinates?.lat === undefined ||
+    coordinates?.lat === "" ||
+    coordinates?.lng === null ||
+    coordinates?.lng === undefined ||
+    coordinates?.lng === ""
+  ) {
+    return null;
+  }
+  const lat = Number(coordinates.lat);
+  const lng = Number(coordinates.lng);
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180 ||
+    (lat === 0 && lng === 0)
+  ) {
+    return null;
+  }
+  return { lat, lng };
+};
+
+const getSavedPosition = (location) => {
+  const coordinates = location?.coordinates;
+  if (
+    coordinates?.lat === null ||
+    coordinates?.lat === undefined ||
+    coordinates?.lat === "" ||
+    coordinates?.lng === null ||
+    coordinates?.lng === undefined ||
+    coordinates?.lng === ""
+  ) {
+    return null;
+  }
+  const lat = Number(coordinates.lat);
+  const lng = Number(coordinates.lng);
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180 ||
+    (lat === 0 && lng === 0)
+  ) {
+    return null;
+  }
+  return { lat, lng };
+};
+
 const Recenter = ({ center }) => {
   const map = useMap();
   useEffect(() => {
@@ -39,7 +95,8 @@ const Recenter = ({ center }) => {
 
 const Maps = () => {
   const [center, setCenter] = useState(defaultCenter);
-  const [currentLocation, setCurrentLocation] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(defaultCenter);
+  const [hasPreciseLocation, setHasPreciseLocation] = useState(false);
   const [places, setPlaces] = useState([]);
   const [savedLocations, setSavedLocations] = useState([]);
   const [, setSelectedPlace] = useState(null);
@@ -63,11 +120,16 @@ const Maps = () => {
           };
           setCurrentLocation(userLocation);
           setCenter(userLocation);
+          setHasPreciseLocation(true);
           toast.success("Location detected");
         },
-        () => toast("Using default location", { icon: "ℹ️" }),
+        () => toast("Showing nearby places around Delhi.", { icon: "ℹ️" }),
         { enableHighAccuracy: true }
       );
+    } else {
+      toast("Location is unavailable. Showing places around Delhi.", {
+        icon: "ℹ️",
+      });
     }
   }, []);
 
@@ -106,15 +168,25 @@ const Maps = () => {
         radius: Math.max(500, Math.floor(radiusKm * 1000)),
       });
       if (data.success) {
-        const list = (data.data.places || []).map((p) => ({
-          ...p,
-          _distanceKm: haversineKm(
-            currentLocation.lat,
-            currentLocation.lng,
-            p.geometry.location.lat,
-            p.geometry.location.lng
-          ),
-        }));
+        if (data.data?.status === "ERROR") {
+          throw new Error("The map provider could not load nearby places.");
+        }
+        const list = (data.data?.places || [])
+          .map((place) => {
+            const position = getPlacePosition(place);
+            if (!position) return null;
+            return {
+              ...place,
+              geometry: { ...place.geometry, location: position },
+              _distanceKm: haversineKm(
+                currentLocation.lat,
+                currentLocation.lng,
+                position.lat,
+                position.lng
+              ),
+            };
+          })
+          .filter(Boolean);
         const sorted =
           sortBy === "distance"
             ? list.sort((a, b) => a._distanceKm - b._distanceKm)
@@ -125,7 +197,8 @@ const Maps = () => {
       }
     } catch (e) {
       console.error(e);
-      setError("Failed to load nearby places.");
+      setPlaces([]);
+      setError(e.message || "Failed to load nearby places.");
     } finally {
       setLoading(false);
     }
@@ -149,18 +222,23 @@ const Maps = () => {
     if (!searchQuery.trim()) return;
     try {
       setLoading(true);
+      setError(null);
       const res = await mapsAPI.geocodeAddress({ address: searchQuery });
-      const loc = res.data?.result?.location;
-      if (loc) {
+      const loc = getSavedPosition({ coordinates: res.data?.result?.location });
+      if (loc && res.data?.result?.formatted_address) {
         setCenter(loc);
         setCurrentLocation(loc);
+        setHasPreciseLocation(false);
         toast.success("Location found");
       } else {
-        toast.error("Location not found");
+        setError(`Could not find “${searchQuery.trim()}”. Try a city or full address.`);
       }
     } catch (e) {
       console.error(e);
-      toast.error("Search failed");
+      setError(
+        e.response?.data?.message ||
+          "Location search failed. Please try again in a moment."
+      );
     } finally {
       setLoading(false);
     }
@@ -200,7 +278,9 @@ const Maps = () => {
       try {
         const rev = await mapsAPI.reverseGeocode({ lat, lng });
         address = rev.data?.result?.formatted_address || address;
-      } catch {}
+      } catch (error) {
+        console.warn("Could not look up the saved location address:", error);
+      }
       const response = await mapsAPI.saveLocation({ name, lat, lng, address });
       if (response.data.success) {
         toast.success("Location saved");
@@ -278,7 +358,7 @@ const Maps = () => {
                     <select
                       value={placeType}
                       onChange={(e) => setPlaceType(e.target.value)}
-                      className="w-full px-3 py-2 md:px-4 md:py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm text-text-primary font-semibold transition-all cursor-pointer"
+                      className="w-full px-3 py-2 md:px-4 md:py-3 border-2 border-border bg-surface rounded-2xl focus:ring-4 focus:ring-accent/20 focus:border-accent shadow-sm text-text-primary font-semibold transition-all cursor-pointer"
                     >
                       <option value="tourist_attraction">
                         Tourist Attractions
@@ -296,7 +376,7 @@ const Maps = () => {
 
                   {/* Enhanced Radius and Sorting Controls */}
                   <div className="grid grid-cols-1 gap-6">
-                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-700 p-3 md:p-4 rounded-2xl">
+                    <div className="bg-accent-muted p-3 md:p-4 rounded-2xl">
                       <label className="flex items-center justify-between text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 md:mb-3">
                         <span>Search Radius</span>
                         <span className="px-3 py-1 bg-accent text-white rounded-full text-xs font-bold">
@@ -326,7 +406,7 @@ const Maps = () => {
                       <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="w-full px-3 py-2 md:px-4 md:py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm text-text-primary font-semibold transition-all cursor-pointer"
+                        className="w-full px-3 py-2 md:px-4 md:py-3 border-2 border-border bg-surface rounded-2xl focus:ring-4 focus:ring-accent/20 focus:border-accent shadow-sm text-text-primary font-semibold transition-all cursor-pointer"
                       >
                         <option value="distance">Distance</option>
                         <option value="name">Name</option>
@@ -357,6 +437,11 @@ const Maps = () => {
                   )}
 
                   <div className="space-y-3 md:space-y-4">
+                    {!loading && !error && places.length === 0 && (
+                      <div className="rounded-md border border-border bg-surface p-4 text-sm text-text-secondary">
+                        No places found in this area. Try another place type or a larger radius.
+                      </div>
+                    )}
                     {places.map((place, index) => (
                       <motion.div
                         key={place.place_id || index}
@@ -382,7 +467,7 @@ const Maps = () => {
                             <FaMapPin className="h-6 w-6 text-white" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-text-primary text-base mb-1 line-clamp-2 group-hover:text-accent dark:group-hover:text-blue-400 transition-colors">
+                            <h3 className="font-bold text-text-primary text-base mb-1 line-clamp-2 group-hover:text-accent transition-colors">
                               {place.name}
                             </h3>
                             <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
@@ -398,7 +483,7 @@ const Maps = () => {
                                 </div>
                               )}
                               {typeof place._distanceKm === "number" && (
-                                <span className="text-xs font-semibold text-accent dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
+                                <span className="text-xs font-semibold text-accent bg-accent-muted px-2 py-1 rounded-lg">
                                   {place._distanceKm.toFixed(2)} km away
                                 </span>
                               )}
@@ -466,18 +551,16 @@ const Maps = () => {
                           <div className="flex justify-between items-start gap-3">
                             <div
                               className="flex-1 cursor-pointer"
-                              onClick={() =>
-                                setCenter({
-                                  lat: location.coordinates.lat,
-                                  lng: location.coordinates.lng,
-                                })
-                              }
+                              onClick={() => {
+                                const position = getSavedPosition(location);
+                                if (position) setCenter(position);
+                              }}
                             >
                               <div className="flex items-center gap-3 mb-0 md:mb-2">
                                 <div className="w-8 h-8 md:w-10 md:h-10 bg-accent-secondary rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                                   <FaHeart className="h-3.5 w-3.5 md:h-5 md:w-5 text-white" />
                                 </div>
-                                <h4 className="font-bold text-text-primary text-sm md:text-base flex-1 line-clamp-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                <h4 className="font-bold text-text-primary text-sm md:text-base flex-1 line-clamp-2 group-hover:text-accent transition-colors">
                                   {location.name}
                                 </h4>
                               </div>
@@ -514,7 +597,7 @@ const Maps = () => {
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className={`absolute ${
             sidebarOpen ? "left-0 md:left-96" : "left-0"
-          } top-1/2 transform -translate-y-1/2 z-40 bg-black/40 backdrop-blur-md border-r border-y border-white/20 md:border-0 md:bg-gradient-to-r md:from-blue-600 md:to-purple-600 text-white px-2 py-4 md:py-6 rounded-r-2xl shadow-2xl hover:shadow-blue-500/50 font-bold transition-all duration-300`}
+          } top-1/2 transform -translate-y-1/2 z-40 bg-black/40 backdrop-blur-md border-r border-y border-white/20 md:border-0 md:bg-gradient-to-r md:from-orange-600 md:to-orange-500 text-white px-2 py-4 md:py-6 rounded-r-2xl shadow-2xl hover:shadow-orange-500/30 font-bold transition-all duration-300`}
         >
           {sidebarOpen ? "◀" : "▶"}
         </motion.button>
@@ -536,12 +619,12 @@ const Maps = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for places..."
-                  className="w-full h-11 pl-4 pr-12 bg-white md:bg-gray-50 dark:bg-gray-800 md:dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm text-text-primary placeholder-gray-400 transition-all text-sm"
+                  className="w-full h-11 pl-4 pr-12 bg-surface border border-border rounded-xl focus:ring-2 focus:ring-accent focus:border-accent shadow-sm text-text-primary placeholder:text-text-secondary transition-all text-sm"
                 />
                 <button
                   type="submit"
                   disabled={loading || !searchQuery.trim()}
-                  className="absolute right-1 top-1 bottom-1 w-9 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center p-0"
+                  className="absolute right-1 top-1 bottom-1 w-9 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center p-0"
                 >
                   <FaSearch className="h-3.5 w-3.5" />
                 </button>
@@ -552,11 +635,11 @@ const Maps = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => currentLocation && setCenter(currentLocation)}
-                className="hidden md:flex w-full h-11 mt-3 bg-gradient-to-br from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl hover:shadow-lg transition-all shadow-md items-center justify-center gap-2 font-semibold text-sm"
-                title="My Location"
+                className="hidden md:flex w-full h-11 mt-3 bg-accent text-bg rounded-md hover:brightness-110 transition-all shadow-md items-center justify-center gap-2 font-semibold text-sm"
+                title="Return to map center"
               >
                 <FaLocationArrow className="h-4 w-4" />
-                Go to My Location
+                Return to Map Center
               </motion.button>
             </motion.div>
           </div>
@@ -568,8 +651,8 @@ const Maps = () => {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => currentLocation && setCenter(currentLocation)}
-            className="absolute bottom-24 right-4 z-[1000] md:hidden w-12 h-12 bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center pointer-events-auto"
-            title="My Location"
+            className="absolute bottom-24 right-4 z-[1000] md:hidden w-12 h-12 bg-accent text-bg rounded-full shadow-lg hover:shadow-xl flex items-center justify-center pointer-events-auto"
+            title="Return to map center"
           >
             <FaLocationArrow className="h-5 w-5" />
           </motion.button>
@@ -588,18 +671,20 @@ const Maps = () => {
             {/* Current Location Marker */}
             {currentLocation && (
               <Marker position={currentLocation}>
-                <Popup>Your Location</Popup>
+                <Popup>
+                  {hasPreciseLocation ? "Your Location" : "Map search center"}
+                </Popup>
               </Marker>
             )}
 
             {/* Place Markers */}
-            {places.map((place, index) => (
+            {places.map((place, index) => {
+              const position = getPlacePosition(place);
+              if (!position) return null;
+              return (
               <Marker
                 key={place.place_id || index}
-                position={{
-                  lat: place.geometry.location.lat,
-                  lng: place.geometry.location.lng,
-                }}
+                position={position}
                 eventHandlers={{ click: () => setSelectedPlace(place) }}
               >
                 <Popup>
@@ -616,20 +701,22 @@ const Maps = () => {
                   </div>
                 </Popup>
               </Marker>
-            ))}
+              );
+            })}
 
             {/* Saved Location Markers */}
-            {savedLocations.map((loc) => (
+            {savedLocations.map((loc) => {
+              const position = getSavedPosition(loc);
+              if (!position) return null;
+              return (
               <Marker
                 key={loc._id}
-                position={{
-                  lat: loc.coordinates.lat,
-                  lng: loc.coordinates.lng,
-                }}
+                position={position}
               >
                 <Popup>{loc.name}</Popup>
               </Marker>
-            ))}
+              );
+            })}
 
             {/* Directions removed - no polyline */}
           </MapContainer>

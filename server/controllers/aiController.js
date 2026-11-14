@@ -68,8 +68,8 @@ Please provide a detailed day-by-day itinerary in the following JSON format:
             "name": "Hotel Name",
             "address": "Hotel Address",
             "coordinates": {
-              "lat": 0.0,
-              "lng": 0.0
+              "lat": null,
+              "lng": null
             }
           },
           "duration": 2,
@@ -134,7 +134,7 @@ Examples of good day titles:
 - "Beach Relaxation & Water Sports"
 - "Mountain Adventures & Scenic Views"
 
-Make sure to include realistic costs, actual attractions, restaurants, and locations for ${destination}. Provide specific addresses and coordinates where possible. The total cost should fit within the budget range of $${
+Make sure to include realistic costs, actual attractions, restaurants, and locations for ${destination}. Provide specific addresses and accurate decimal latitude/longitude coordinates for every selected place, including meals when available. Never use 0, 0 as placeholder coordinates; when exact coordinates are unknown, use the coordinates of the named venue's street address or omit the coordinates. The total cost should fit within the budget range of $${
       budget.min || 0
     } - $${budget.max || 5000}.`;
 
@@ -200,7 +200,7 @@ Make sure to include realistic costs, actual attractions, restaurants, and locat
               location: {
                 name: destination,
                 address: `${destination} city center`,
-                coordinates: { lat: 0, lng: 0 },
+                coordinates: { lat: null, lng: null },
               },
               duration: 4,
               cost: {

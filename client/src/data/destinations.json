@@ -1,0 +1,146 @@
+[
+  {
+    "slug": "jaipur",
+    "name": "Jaipur",
+    "region": "Rajasthan, India",
+    "summary": "Explore Jaipur's historic walled city, grand forts, craft markets, and Rajasthani food with a trip paced around your interests.",
+    "intro": "Jaipur, Rajasthan's capital, is known for its planned historic centre, pink-toned buildings, hilltop forts, and long-standing craft traditions. Use this guide to choose a comfortable pace, group nearby sights, and leave room for the city's markets and food.",
+    "image": "https://images.unsplash.com/photo-1599661046827-dacff0c0f09a?auto=format&fit=crop&w=1400&q=82",
+    "imageAlt": "Amber Fort overlooking the hills near Jaipur, Rajasthan",
+    "overview": [
+      "Jaipur rewards a little planning. The old city is compact enough to explore by neighbourhood, while Amber Fort and several other major sights sit beyond the central streets. Start early for outdoor visits, then use the warmer middle of the day for museums, lunch, or a rest.",
+      "The city is also a place to learn through its crafts. Textiles, block printing, blue pottery, jewellery, and metalwork appear in workshops and markets. Ask before photographing artisans, compare quality and prices, and allow time to browse rather than treating shopping as a quick stop."
+    ],
+    "attractions": [
+      { "name": "Amber Fort", "description": "A large hill fort complex north of the city, with courtyards, gateways, and views across the surrounding landscape. Check current visitor access and allow time for the uphill approach." },
+      { "name": "Hawa Mahal", "description": "The distinctive, many-windowed facade is one of Jaipur's best-known landmarks. See it from the street and, if you enter, take time to look over the old-city streets from inside." },
+      { "name": "City Palace", "description": "A historic palace complex in the walled city with courtyards and museum spaces. Check which areas are open and ticketed before visiting." },
+      { "name": "Jantar Mantar", "description": "An observatory with monumental instruments near City Palace. A guide or an explanatory visit can make the instruments easier to understand." },
+      { "name": "Johari Bazaar and the old city", "description": "Browse busy streets known for jewellery, textiles, and everyday shopping. Visit respectfully, keep valuables secure, and agree on prices before buying." }
+    ],
+    "bestTime": "Many visitors prefer the cooler months from October to March for walking and outdoor sightseeing. Spring can warm quickly, while summer afternoons are very hot. Monsoon conditions vary; check a current forecast and plan flexible indoor alternatives.",
+    "duration": "Two full days can cover a first look at the walled city and Amber Fort. Three days allow a less rushed pace, time for crafts and museums, and flexibility for heat or traffic.",
+    "budget": {
+      "label": "Indicative planning estimate per person, per day",
+      "economy": "INR 1,500–3,500",
+      "comfort": "INR 3,500–8,000",
+      "note": "These are broad planning estimates, not live prices. They exclude travel to Jaipur and can change with season, accommodation choice, transport, meals, and attraction entry fees. Confirm current prices before booking."
+    },
+    "stay": "For convenient access to historic sights, compare stays in or near the walled city and central Jaipur. Areas farther out may offer more space or quieter evenings, but add travel time. Check recent reviews, air conditioning needs, and how the property handles late arrivals.",
+    "transport": "Jaipur is connected by rail, road, and air; schedules and availability vary. Within the city, use a mix of walking in compact areas and licensed taxis, app-based rides, or auto-rickshaws for longer distances. Agree on a fare or confirm the meter before starting a ride.",
+    "experiences": [
+      "Visit a craft workshop to understand how block printing or pottery is made.",
+      "Try a local meal at a well-reviewed restaurant and ask about spice levels.",
+      "Explore the old city on foot in the cooler part of the day.",
+      "Build in a quiet break between major sights instead of crossing town repeatedly."
+    ],
+    "tips": [
+      "Carry water, sun protection, and comfortable shoes for uneven surfaces.",
+      "Check opening hours, entry rules, and ticket information on official or current sources before travelling.",
+      "Keep a flexible schedule for traffic and heat; do not rely on an exact drive-time estimate.",
+      "Ask permission before photographing people, homes, or craft work."
+    ],
+    "faqs": [
+      { "question": "How many days should I spend in Jaipur?", "answer": "Two full days work for a focused first visit. A third day gives you more time for crafts, museums, slower meals, and schedule changes." },
+      { "question": "Can I explore Jaipur without a car?", "answer": "Yes. Walking works for parts of the old city, and local rides can connect more distant sights. Plan transport between clusters rather than expecting every attraction to be walkable." },
+      { "question": "Is the budget on this page a quote?", "answer": "No. It is an indicative planning estimate only. Accommodation, transport, meals, and entry prices vary; check current rates before making bookings." }
+    ],
+    "relatedSlugs": ["ladakh", "kerala"]
+  },
+  {
+    "slug": "ladakh",
+    "name": "Ladakh",
+    "region": "Himalayas, India",
+    "summary": "Plan a thoughtful Ladakh journey around altitude, acclimatisation, changing mountain conditions, monasteries, and the distances between places.",
+    "intro": "Ladakh's high-altitude landscapes, mountain roads, monasteries, and settlements make it unlike a short city break. A good plan puts acclimatisation and local conditions first, leaves room for rest, and avoids treating long distances as quick transfers.",
+    "overview": [
+      "Leh is a common starting point, but travel in Ladakh involves more than choosing attractions. Elevation, road conditions, weather, and travel permissions can affect what is practical. Build a flexible itinerary and confirm current requirements with official local sources before departure.",
+      "The region's cultural sites are active places of worship and community life. Dress respectfully, follow posted guidance, ask before taking photographs, and avoid disturbing ceremonies. When travelling outside town, use established services and plan for limited connectivity and services."
+    ],
+    "image": "https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1400&q=82",
+    "imageAlt": "High mountain scenery that reflects the terrain of Ladakh",
+    "attractions": [
+      { "name": "Leh Old Town and Leh Palace", "description": "Explore the historic centre at an unhurried pace. The palace setting provides a view over Leh; check access and current opening arrangements." },
+      { "name": "Thiksey Monastery", "description": "A prominent monastery complex outside Leh. Visit as a guest, observe local customs, and confirm visitor access before setting out." },
+      { "name": "Hemis Monastery", "description": "A major religious site in the region. Festival dates and visitor arrangements vary, so check current local information." },
+      { "name": "Nubra Valley", "description": "A broad valley reached by a mountain route. Journey time, road access, and any travel requirements can change; avoid tight same-day connections." },
+      { "name": "Pangong Tso", "description": "A high-altitude lake in a remote border region. Access and permits may be subject to current rules; verify requirements before travel and avoid planning without a local update." }
+    ],
+    "bestTime": "Travel is often planned for the warmer months when key roads are more likely to be accessible, but exact opening dates and conditions vary year to year. Winter travel has different access and safety considerations. Check local forecasts, road updates, and official advisories close to departure.",
+    "duration": "Allow several days for Leh and nearby sites, including time to acclimatise. A longer trip is needed for remote valleys and lakes; do not compress long mountain drives into a rushed schedule.",
+    "budget": {
+      "label": "Indicative planning estimate per person, per day",
+      "economy": "INR 2,500–5,000",
+      "comfort": "INR 5,000–12,000",
+      "note": "These broad estimates are for planning, not live prices. Remote transport, season, accommodation, meals, permits where applicable, and weather-related changes can materially affect costs. Confirm current rates and requirements locally."
+    },
+    "stay": "In Leh, choose accommodation that allows restful nights and gives clear information about local conditions. For travel outside Leh, confirm overnight stops and transport with a reputable local operator. Do not book a schedule that assumes you can safely continue when unwell.",
+    "transport": "Road travel is central to many Ladakh itineraries, and journey times can be long and variable. Confirm the condition of routes and any permits before departure. Use experienced local drivers for mountain routes and carry essential medicines and supplies as advised by a clinician.",
+    "experiences": [
+      "Spend the first days at a gentle pace and learn how your body responds to altitude.",
+      "Visit a monastery respectfully and follow local instructions.",
+      "Choose one region at a time instead of adding every distant landmark.",
+      "Support local businesses and ask about community guidance for sensitive sites."
+    ],
+    "tips": [
+      "Acclimatisation is a health and safety matter; follow current medical guidance and seek care for concerning symptoms.",
+      "Check current road, weather, permit, and travel advisories before each leg.",
+      "Keep spare time for delays and do not assume mobile or internet coverage.",
+      "Pack for changing temperatures and protect yourself from strong sun at altitude."
+    ],
+    "faqs": [
+      { "question": "Should I acclimatise in Ladakh?", "answer": "Yes. High altitude can affect visitors, and acclimatisation should be built into plans. Follow current medical advice and seek professional care for symptoms that concern you." },
+      { "question": "Can I visit Pangong Tso without checking permits?", "answer": "No. Requirements and access can change. Verify current official rules and local conditions before travelling." },
+      { "question": "How long should I plan for Ladakh?", "answer": "Plan several days for acclimatisation and Leh-area visits. Remote destinations require additional time because roads are long and conditions can change." }
+    ],
+    "relatedSlugs": ["jaipur", "kerala"]
+  },
+  {
+    "slug": "kerala",
+    "name": "Kerala",
+    "region": "South India",
+    "summary": "Shape a Kerala trip around the balance of coastal towns, backwaters, hill country, food, and the time needed to travel between them.",
+    "intro": "Kerala offers very different experiences across its coast, backwaters, towns, and hill country. Rather than trying to cover the entire state in a few days, choose a small number of areas and allow enough time for the journeys between them.",
+    "image": "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?auto=format&fit=crop&w=1400&q=82",
+    "imageAlt": "Green backwater scenery in Kerala, India",
+    "overview": [
+      "A practical Kerala route might combine a coastal stop with either a backwater experience or a hill-country stay. The right combination depends on arrival and departure points, trip length, weather, and how much time you want to spend in transit.",
+      "Food and local life are part of the journey. Look for regional meals, ask about ingredients and spice levels, and choose responsible operators for boat or nature activities. Seasonal rainfall can affect plans, so keep indoor alternatives and flexible travel days."
+    ],
+    "attractions": [
+      { "name": "Fort Kochi", "description": "A historic coastal neighbourhood with museums, heritage streets, and cafes. Explore on foot, respect residential spaces, and check local opening times." },
+      { "name": "Alappuzha backwaters", "description": "A network of waterways and lakes experienced by boat or from the shore. Compare operators and ask about the route, duration, safety, and environmental practices." },
+      { "name": "Munnar", "description": "A hill station region known for tea-growing landscapes. Travel time from the coast can be significant, so avoid adding it as a rushed day trip." },
+      { "name": "Thekkady and Periyar area", "description": "A forest and lake region with nature-oriented activities. Check current access, activity rules, and responsible wildlife-viewing practices." },
+      { "name": "Kozhikode", "description": "A coastal city with a strong food culture and a different pace from the central tourist circuit. Plan based on your route and available travel connections." }
+    ],
+    "bestTime": "Conditions vary across the state. Many travellers prefer the drier, cooler period, while monsoon months bring heavier rainfall that can change transport and outdoor plans. Check destination-specific forecasts and current advisories; do not assume the whole state has identical weather.",
+    "duration": "Five days can work for two nearby areas with limited transfers. A week or more allows a coast, backwater, and hill-country combination at a slower pace, depending on arrival and departure locations.",
+    "budget": {
+      "label": "Indicative planning estimate per person, per day",
+      "economy": "INR 1,800–4,000",
+      "comfort": "INR 4,000–10,000",
+      "note": "These are indicative planning ranges, not live rates. Boat trips, long-distance transfers, season, accommodation, and meal choices can change the total. Confirm current prices directly before booking."
+    },
+    "stay": "Choose accommodation by the experience you want: heritage stays and guesthouses near town centres, backwater lodging for a quieter water-side stay, or hill-area accommodation for cooler scenery. Check access, cancellation terms, and transfer arrangements in advance.",
+    "transport": "Rail and road services connect many Kerala towns, but routes and journey times vary. Use current timetables and leave room for road delays. For multi-stop trips, compare a driver for selected legs with public transport rather than assuming a single transfer plan fits every destination.",
+    "experiences": [
+      "Take a guided walk through a historic neighbourhood.",
+      "Choose a backwater trip with clear safety and environmental practices.",
+      "Try regional dishes and ask local hosts about seasonal ingredients.",
+      "Spend time in one area instead of making every day a long transfer."
+    ],
+    "tips": [
+      "Check rainfall forecasts and travel advisories, especially when planning outdoor or water activities.",
+      "Confirm boat operator safety practices and life-jacket availability before departure.",
+      "Carry light rain protection and breathable clothing suited to the season.",
+      "Respect local customs at religious sites and ask before photographing people."
+    ],
+    "faqs": [
+      { "question": "How many days do I need for Kerala?", "answer": "Five days can cover two areas at a measured pace. A week or longer is more comfortable if you want to combine the coast, backwaters, and hill country." },
+      { "question": "Can I combine Munnar and the backwaters?", "answer": "Yes, with enough time for the road journey. Plan overnight stays and avoid treating the hill station as a quick same-day excursion from the coast." },
+      { "question": "Are the budget figures live prices?", "answer": "No. They are broad planning estimates. Check current accommodation, transport, activity, and meal prices before booking." }
+    ],
+    "relatedSlugs": ["jaipur", "ladakh"]
+  }
+]

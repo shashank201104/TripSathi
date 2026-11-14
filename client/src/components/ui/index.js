@@ -370,5 +370,3 @@ export const PageHeader = ({ title, subtitle, badge, actions, className = "" }) 
     </div>
   </div>
 );
-
-export { default as ThemeToggle } from "./ThemeToggle";

@@ -76,6 +76,7 @@ const userRoutes = require("./routes/users");
 const tripRoutes = require("./routes/trips");
 const mapRoutes = require("./routes/maps");
 const aiRoutes = require("./routes/ai");
+const contactRoutes = require("./routes/contact");
 
 // Enhanced CORS configuration
 const corsOptions = {
@@ -90,7 +91,6 @@ if (process.env.NODE_ENV === "production" && process.env.ALLOWED_ORIGINS) {
   corsOptions.origin = process.env.ALLOWED_ORIGINS.split(",").map((origin) =>
     origin.trim()
   );
-  console.log("Allowed Origins:", corsOptions.origin);
 }
 
 app.use(cors(corsOptions));
@@ -139,6 +139,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/maps", mapRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/contact", contactRoutes);
 
 // Enhanced error handling middleware
 app.use(errorLogger);

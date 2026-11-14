@@ -1,3 +1,7 @@
-# https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /api/
+
+# Private page routes are marked noindex in their HTML. They remain crawlable
+# so search engines can see that directive; robots.txt is not access control.
+Sitemap: https://trip-sathi-gray.vercel.app/sitemap.xml

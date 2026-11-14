@@ -1,6 +1,13 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const {
+  EMAIL_PATTERN,
+  NAME_PATTERN,
+  NEW_PASSWORD_MAX_LENGTH,
+  NEW_PASSWORD_MIN_LENGTH,
+  isValidNewPassword,
+} = require("../utils/authValidation");
 
 const userSchema = new mongoose.Schema(
   {
@@ -11,35 +18,34 @@ const userSchema = new mongoose.Schema(
       trim: true,
       minlength: [2, "Name must be at least 2 characters"],
       maxlength: [50, "Name cannot be more than 50 characters"],
-      match: [
-        /^[a-zA-Z\s'-]+$/,
-        "Name can only contain letters, spaces, hyphens and apostrophes",
-      ],
+      match: [NAME_PATTERN, "Please provide a valid name"],
     },
     email: {
       type: String,
       required: [true, "Please provide an email"],
       unique: true,
       lowercase: true,
-      match: [
-        /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/,
-        "Please provide a valid email address",
-      ],
+      maxlength: [254, "Email cannot be more than 254 characters"],
+      match: [EMAIL_PATTERN, "Please provide a valid email address"],
     },
     password: {
       type: String,
       required: [true, "Please provide a password"],
-      minlength: [8, "Password must be at least 8 characters"],
+      minlength: [
+        NEW_PASSWORD_MIN_LENGTH,
+        `Password must be at least ${NEW_PASSWORD_MIN_LENGTH} characters`,
+      ],
+      maxlength: [
+        NEW_PASSWORD_MAX_LENGTH,
+        `Password cannot exceed ${NEW_PASSWORD_MAX_LENGTH} characters`,
+      ],
       select: false,
       validate: {
         validator: function (password) {
-          // Password must contain at least: 1 uppercase, 1 lowercase, 1 number, 1 special char
-          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(
-            password
-          );
+          return isValidNewPassword(password);
         },
         message:
-          "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+          `Password must be at least ${NEW_PASSWORD_MIN_LENGTH} characters and no more than ${NEW_PASSWORD_MAX_LENGTH} UTF-8 bytes`,
       },
     },
     avatar: {

@@ -1,8 +1,5 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
-import { tripAPI } from "../../services/api";
 import {
   FaMapMarkerAlt,
   FaCalendarAlt,
@@ -10,74 +7,13 @@ import {
   FaRupeeSign,
   FaStar,
   FaArrowRight,
-  FaDownload,
-  FaPlus,
   FaEye,
 } from "react-icons/fa";
+import ItineraryMap from "./ItineraryMap";
 
 const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
   const [imageError, setImageError] = useState(false);
-  const [isAddingTrip, setIsAddingTrip] = useState(false);
-  const navigate = useNavigate();
-
-  const handleDownloadPDF = () => {
-    toast.success(
-      "Generating PDF... This feature will download your trip itinerary!"
-    );
-    // TODO: Implement PDF generation
-    // This would typically call an API endpoint that generates a PDF
-    // Example: window.open(`/api/trips/download-pdf/${tripId}`, '_blank');
-  };
-
-  const handleAddTrip = async () => {
-    try {
-      setIsAddingTrip(true);
-
-      // Prepare trip data for saving
-      const tripData = {
-        title: `Trip to ${itinerary.destination || formValues.destination}`,
-        description:
-          itinerary.overview ||
-          `${formValues.duration} day trip to ${
-            itinerary.destination || formValues.destination
-          }`,
-        destination: itinerary.destination || formValues.destination,
-        startDate: formValues.startDate,
-        endDate: formValues.endDate,
-        duration: itinerary.duration,
-        travelers: formValues.travelers,
-        budget: {
-          min: itinerary.totalEstimatedCost?.amount || 0,
-          max: itinerary.totalEstimatedCost?.amount || 0,
-          currency: itinerary.totalEstimatedCost?.currency || "INR",
-        },
-        interests: formValues.interests || [],
-        travelStyle: formValues.travelStyle,
-        accommodation: formValues.accommodationType,
-        transport: formValues.transportation ? [formValues.transportation] : [],
-        specialRequests: formValues.specialRequests || "",
-        itinerary: {
-          dailyPlans: itinerary.itinerary || [],
-          recommendations: itinerary.recommendations || {},
-          totalEstimatedCost: itinerary.totalEstimatedCost,
-        },
-        // Generated trips should have status "upcoming"
-        status: "upcoming",
-      };
-
-      const response = await tripAPI.createTrip(tripData);
-
-      if (response.data.success) {
-        toast.success("Trip added successfully!");
-        navigate("/trips");
-      }
-    } catch (error) {
-      console.error("Error adding trip:", error);
-      toast.error(error.response?.data?.message || "Failed to add trip");
-    } finally {
-      setIsAddingTrip(false);
-    }
-  };
+  const [showMap, setShowMap] = useState(false);
 
   const formatCurrency = (amount) => {
     if (amount === undefined || amount === null || Number.isNaN(amount)) {
@@ -183,7 +119,7 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
       <div className="p-3 md:p-8">
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-2 md:p-4 rounded-xl text-center">
+          <div className="bg-accent-muted p-2 md:p-4 rounded-xl text-center">
             <FaCalendarAlt className="h-5 w-5 md:h-6 md:w-6 mx-auto text-accent mb-2" />
             <p className="text-xl md:text-2xl font-bold text-text-primary">
               {itinerary.duration}
@@ -191,8 +127,8 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
             <p className="text-sm text-gray-600 dark:text-gray-400">Days</p>
           </div>
 
-          <div className="bg-purple-50 dark:bg-purple-900/20 p-2 md:p-4 rounded-xl text-center">
-            <FaUsers className="h-5 w-5 md:h-6 md:w-6 mx-auto text-purple-600 mb-2" />
+          <div className="bg-accent-muted p-2 md:p-4 rounded-xl text-center">
+            <FaUsers className="h-5 w-5 md:h-6 md:w-6 mx-auto text-accent mb-2" />
             <p className="text-xl md:text-2xl font-bold text-text-primary">
               {formValues.travelers}
             </p>
@@ -255,6 +191,32 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
             </p>
           </div>
         )}
+
+        <section className="mb-6" aria-labelledby="itinerary-map-title">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="section-label mb-1">Your route</p>
+              <h3 id="itinerary-map-title" className="text-lg font-semibold text-text-primary">
+                AI-selected places
+              </h3>
+            </div>
+            <button
+              type="button"
+              aria-expanded={showMap}
+              onClick={() => setShowMap((visible) => !visible)}
+              className="btn-outline btn-sm"
+            >
+              <FaMapMarkerAlt className="mr-2 h-3.5 w-3.5" />
+              {showMap ? "Hide map" : "Show map"}
+            </button>
+          </div>
+          {showMap && (
+            <ItineraryMap
+              itinerary={itinerary}
+              destination={itinerary.destination || formValues.destination}
+            />
+          )}
+        </section>
 
         {/* Action Buttons */}
         <motion.button

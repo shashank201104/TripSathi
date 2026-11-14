@@ -150,75 +150,7 @@ export const NotificationProvider = ({ children }) => {
         });
       });
 
-      // Payment-related events
-      newSocket.on("payment-success", (data) => {
-        addNotification({
-          type: "payment",
-          title: "Payment Successful",
-          message: `Payment of ${data.currency.toUpperCase()} ${
-            data.amount
-          } was successful.`,
-          data,
-        });
-
-        toast.success("Payment completed successfully!");
-      });
-
-      newSocket.on("payment-failed", (data) => {
-        addNotification({
-          type: "payment",
-          title: "Payment Failed",
-          message: `Payment failed: ${data.error}`,
-          data,
-        });
-
-        toast.error("Payment failed. Please try again.");
-      });
-
-      // Booking-related events
-      newSocket.on("booking-confirmed", (data) => {
-        addNotification({
-          type: "booking",
-          title: "Booking Confirmed",
-          message: `Your booking (${data.bookingReference}) has been confirmed.`,
-          data,
-        });
-
-        toast.success("Booking confirmed!");
-      });
-
-      newSocket.on("booking-cancelled", (data) => {
-        addNotification({
-          type: "booking",
-          title: "Booking Cancelled",
-          message: `Your booking (${data.bookingReference}) has been cancelled.`,
-          data,
-        });
-      });
-
-      // Subscription events
-      newSocket.on("subscription-renewed", (data) => {
-        addNotification({
-          type: "subscription",
-          title: "Subscription Renewed",
-          message: `Your subscription has been renewed. Next billing: ${new Date(
-            data.periodEnd
-          ).toLocaleDateString()}`,
-          data,
-        });
-      });
-
-      newSocket.on("subscription-cancelled", (data) => {
-        addNotification({
-          type: "subscription",
-          title: "Subscription Cancelled",
-          message: `Your subscription has been cancelled and will end on ${new Date(
-            data.endDate
-          ).toLocaleDateString()}`,
-          data,
-        });
-      });
-
+      
       // Admin notifications
       if (user.role === "admin") {
         newSocket.on("admin-alert", (data) => {

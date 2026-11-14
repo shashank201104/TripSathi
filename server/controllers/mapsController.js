@@ -1,103 +1,196 @@
 const { validationResult } = require("express-validator");
 const axios = require("axios");
 
-// Mock places data - replace with Google Places API in production
-const mockPlacesData = {
-  restaurants: [
-    {
-      id: "rest_1",
-      name: "Le Bernardin",
-      category: "Fine Dining",
-      cuisine: "French Seafood",
-      rating: 4.8,
-      priceLevel: 4,
-      location: {
-        address: "155 W 51st St, New York, NY 10019",
-        coordinates: { lat: 40.7614, lng: -73.9776 },
-      },
-      hours: {
-        monday: "5:30 PM - 10:30 PM",
-        tuesday: "5:30 PM - 10:30 PM",
-        wednesday: "5:30 PM - 10:30 PM",
-        thursday: "5:30 PM - 10:30 PM",
-        friday: "5:30 PM - 10:30 PM",
-        saturday: "5:30 PM - 10:30 PM",
-        sunday: "Closed",
-      },
-      photos: ["photo1.jpg", "photo2.jpg"],
-      reviews: [
-        {
-          author: "John D.",
-          rating: 5,
-          text: "Exceptional seafood and impeccable service.",
-          date: "2024-01-15",
-        },
-      ],
-      phone: "+1 212-554-1515",
-      website: "https://le-bernardin.com",
-      amenities: ["Reservations Required", "Valet Parking", "Wine Pairing"],
-    },
-  ],
-  attractions: [
-    {
-      id: "attr_1",
-      name: "Statue of Liberty",
-      category: "Monument",
-      rating: 4.6,
-      location: {
-        address: "Liberty Island, New York, NY 10004",
-        coordinates: { lat: 40.6892, lng: -74.0445 },
-      },
-      description: "Iconic symbol of freedom and democracy",
-      hours: {
-        monday: "9:00 AM - 5:00 PM",
-        tuesday: "9:00 AM - 5:00 PM",
-        wednesday: "9:00 AM - 5:00 PM",
-        thursday: "9:00 AM - 5:00 PM",
-        friday: "9:00 AM - 5:00 PM",
-        saturday: "9:00 AM - 5:00 PM",
-        sunday: "9:00 AM - 5:00 PM",
-      },
-      ticketPrice: {
-        adult: 25,
-        child: 12,
-        currency: "USD",
-      },
-      photos: ["statue1.jpg", "statue2.jpg"],
-      tags: ["History", "Monument", "Photography", "Iconic"],
-      accessibility: true,
-      estimatedVisitTime: "3-4 hours",
-    },
-  ],
-  hotels: [
-    {
-      id: "hotel_1",
-      name: "The Plaza",
-      category: "Luxury Hotel",
-      rating: 4.5,
-      priceLevel: 4,
-      location: {
-        address: "768 5th Ave, New York, NY 10019",
-        coordinates: { lat: 40.7648, lng: -73.9754 },
-      },
-      amenities: [
-        "Spa",
-        "Fitness Center",
-        "Restaurant",
-        "Room Service",
-        "Concierge",
-      ],
-      photos: ["plaza1.jpg", "plaza2.jpg"],
-      phone: "+1 212-759-3000",
-      website: "https://theplazany.com",
-    },
-  ],
+// --------------------------------------------------
+// CONFIG
+// --------------------------------------------------
+
+const NOMINATIM_URL = "https://nominatim.openstreetmap.org";
+const OVERPASS_URL = "https://overpass.kumi.systems/api/interpreter";
+const OSRM_URL = "https://router.project-osrm.org";
+
+const HTTP_HEADERS = {
+  "User-Agent": "TripSathi/1.0 (travel-planner)",
+  Accept: "application/json",
 };
 
-// Search places (restaurants, attractions, hotels)
+// --------------------------------------------------
+// HELPERS
+// --------------------------------------------------
+
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371000;
+
+  const toRadians = (degree) => (degree * Math.PI) / 180;
+
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+};
+
+const formatDistance = (meters) => {
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+
+  return `${(meters / 1000).toFixed(1)} km`;
+};
+
+const calculateWalkingTime = (meters) => {
+  const walkingSpeed = 80;
+  return Math.max(1, Math.round(meters / walkingSpeed));
+};
+
+// Accept BOTH:
+// lat/lng
+// latitude/longitude
+const getCoordinates = (query) => {
+  const lat = parseFloat(query.lat ?? query.latitude);
+  const lon = parseFloat(query.lng ?? query.longitude);
+
+  return { lat, lon };
+};
+
+// --------------------------------------------------
+// OSM → TRIPSATHI FORMAT
+// --------------------------------------------------
+
+const convertOSMPlace = (element, centerLat, centerLon) => {
+  const tags = element.tags || {};
+
+  const lat = element.lat ?? element.center?.lat;
+  const lon = element.lon ?? element.center?.lon;
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return null;
+  }
+
+  const distance = calculateDistance(
+    centerLat,
+    centerLon,
+    lat,
+    lon
+  );
+
+  let category = "Place";
+
+  if (tags.amenity === "restaurant") {
+    category = "Restaurant";
+  } else if (tags.amenity === "cafe") {
+    category = "Cafe";
+  } else if (tags.amenity === "fast_food") {
+    category = "Fast Food";
+  } else if (tags.tourism === "hotel") {
+    category = "Hotel";
+  } else if (
+    tags.tourism === "attraction" ||
+    tags.tourism === "museum" ||
+    tags.tourism === "gallery" ||
+    tags.tourism === "viewpoint"
+  ) {
+    category = "Attraction";
+  } else if (tags.historic) {
+    category = "Historical Site";
+  } else if (tags.leisure === "park") {
+    category = "Park";
+  }
+
+  const addressParts = [
+    tags["addr:housenumber"],
+    tags["addr:street"],
+    tags["addr:city"],
+    tags["addr:postcode"],
+  ].filter(Boolean);
+
+  const walkingTime = calculateWalkingTime(distance);
+
+  return {
+    id: `osm_${element.type}_${element.id}`,
+
+    osmId: element.id,
+    osmType: element.type,
+
+    name:
+      tags.name ||
+      tags["name:en"] ||
+      tags["official_name"] ||
+      "Unnamed Place",
+
+    category,
+
+    cuisine: tags.cuisine || null,
+    cuisineType: tags.cuisine || null,
+
+    rating: null,
+    priceLevel: null,
+
+    location: {
+      address:
+        addressParts.length > 0
+          ? addressParts.join(", ")
+          : tags["addr:full"] || null,
+
+      coordinates: {
+        lat,
+        lng: lon,
+      },
+    },
+
+    distance: Math.round(distance),
+    distanceText: formatDistance(distance),
+
+    walkingTime,
+    walkingTimeText: `${walkingTime} min walk`,
+
+    phone:
+      tags.phone ||
+      tags["contact:phone"] ||
+      null,
+
+    website:
+      tags.website ||
+      tags["contact:website"] ||
+      null,
+
+    openingHours:
+      tags.opening_hours || null,
+
+    image:
+      tags.image ||
+      tags["image:url"] ||
+      null,
+
+    tags: Object.entries(tags)
+      .filter(([key]) =>
+        [
+          "tourism",
+          "amenity",
+          "historic",
+          "leisure",
+          "cuisine",
+        ].includes(key)
+      )
+      .map(([key, value]) => `${key}:${value}`),
+  };
+};
+
+// --------------------------------------------------
+// SEARCH PLACES - NOMINATIM
+// --------------------------------------------------
+
 const searchPlaces = async (req, res) => {
   try {
     const errors = validationResult(req);
+
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
@@ -109,155 +202,228 @@ const searchPlaces = async (req, res) => {
     const {
       query,
       location,
-      radius = 5000, // meters
-      type = "all", // restaurant, attraction, hotel, all
-      minRating = 0,
-      maxPrice = 5,
-      openNow = false,
+      radius = 5000,
+      type = "all",
+      keyword,
     } = req.query;
 
-    let results = [];
-
-    // Filter by type
-    if (type === "all" || type === "restaurant") {
-      results = [...results, ...mockPlacesData.restaurants];
-    }
-    if (type === "all" || type === "attraction") {
-      results = [...results, ...mockPlacesData.attractions];
-    }
-    if (type === "all" || type === "hotel") {
-      results = [...results, ...mockPlacesData.hotels];
+    if (!query && !location) {
+      return res.status(400).json({
+        success: false,
+        message: "Query or location is required",
+      });
     }
 
-    // Filter by query
-    if (query) {
-      results = results.filter(
-        (place) =>
-          place.name.toLowerCase().includes(query.toLowerCase()) ||
-          (place.category &&
-            place.category.toLowerCase().includes(query.toLowerCase())) ||
-          (place.cuisine &&
-            place.cuisine.toLowerCase().includes(query.toLowerCase()))
+    const searchText = query || location;
+
+    const response = await axios.get(
+      `${NOMINATIM_URL}/search`,
+      {
+        params: {
+          q: searchText,
+          format: "json",
+          addressdetails: 1,
+          limit: 10,
+        },
+
+        headers: HTTP_HEADERS,
+        timeout: 10000,
+      }
+    );
+
+    let results = response.data.map((item) => ({
+      id: `nominatim_${item.place_id}`,
+
+      name:
+        item.name ||
+        item.display_name?.split(",")[0] ||
+        "Place",
+
+      category:
+        item.type ||
+        item.class ||
+        "Place",
+
+      location: {
+        address: item.display_name,
+
+        coordinates: {
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
+        },
+      },
+
+      type: item.type,
+      osmType: item.osm_type,
+      osmId: item.osm_id,
+    }));
+
+    if (keyword) {
+      const keywordLower = keyword.toLowerCase();
+
+      results = results.filter((place) =>
+        place.name
+          .toLowerCase()
+          .includes(keywordLower)
       );
     }
 
-    // Filter by rating
-    if (minRating > 0) {
-      results = results.filter(
-        (place) => place.rating >= parseFloat(minRating)
-      );
-    }
-
-    // Filter by price level
-    if (maxPrice < 5) {
-      results = results.filter(
-        (place) => !place.priceLevel || place.priceLevel <= parseInt(maxPrice)
-      );
-    }
-
-    // Sort by rating
-    results.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-
-    res.json({
+    return res.json({
       success: true,
+
       data: {
         places: results,
         totalResults: results.length,
+
         searchParams: {
           query,
           location,
           radius,
           type,
-          minRating,
-          maxPrice,
-          openNow,
+          keyword,
         },
       },
     });
   } catch (error) {
-    console.error("Search places error:", error);
-    res.status(500).json({
+    console.error(
+      "Search places provider error:",
+      error.response?.status,
+      error.response?.data || error.message
+    );
+
+    return res.status(502).json({
       success: false,
-      message: "Failed to search places",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message:
+        "Location search provider is temporarily unavailable",
     });
   }
 };
 
-// Get place details
+// --------------------------------------------------
+// PLACE DETAILS - NOMINATIM
+// --------------------------------------------------
+
 const getPlaceDetails = async (req, res) => {
   try {
     const { placeId } = req.params;
 
-    // Search in all categories
-    let place = null;
-    const allPlaces = [
-      ...mockPlacesData.restaurants,
-      ...mockPlacesData.attractions,
-      ...mockPlacesData.hotels,
-    ];
-
-    place = allPlaces.find((p) => p.id === placeId);
-
-    if (!place) {
-      return res.status(404).json({
+    if (!placeId) {
+      return res.status(400).json({
         success: false,
-        message: "Place not found",
+        message: "Place ID is required",
       });
     }
 
-    // In production, fetch additional details from Google Places API
-    const detailedPlace = {
-      ...place,
-      nearbyPlaces: [
-        {
-          id: "nearby_1",
-          name: "Central Park",
-          category: "Park",
-          distance: "0.3 miles",
-          walkingTime: "6 minutes",
-        },
-        {
-          id: "nearby_2",
-          name: "Times Square",
-          category: "Tourist Attraction",
-          distance: "0.5 miles",
-          walkingTime: "10 minutes",
-        },
-      ],
-      transportation: {
-        subway: ["N, Q, R, W lines"],
-        bus: ["M5, M7, M104"],
-        parking: "Valet parking available",
-        taxi: "Available 24/7",
-      },
-      weather: {
-        current: "72°F",
-        condition: "Partly cloudy",
-        forecast: "Sunny, high 75°F",
-      },
-    };
+    /*
+      Expected:
 
-    res.json({
+      osm_node_123
+      osm_way_123
+      osm_relation_123
+    */
+
+    const parts = placeId.split("_");
+
+    if (parts.length < 3 || parts[0] !== "osm") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OSM place ID",
+      });
+    }
+
+    const osmType = parts[1];
+    const osmId = parts.slice(2).join("_");
+
+    const response = await axios.get(
+      `${NOMINATIM_URL}/details`,
+      {
+        params: {
+          osmtype:
+            osmType === "node"
+              ? "N"
+              : osmType === "way"
+              ? "W"
+              : "R",
+
+          osmid: osmId,
+
+          format: "json",
+          addressdetails: 1,
+        },
+
+        headers: HTTP_HEADERS,
+        timeout: 10000,
+      }
+    );
+
+    const data = response.data;
+
+    const lat = parseFloat(data.lat);
+    const lon = parseFloat(data.lon);
+
+    return res.json({
       success: true,
+
       data: {
-        place: detailedPlace,
+        place: {
+          id: placeId,
+
+          osmType,
+          osmId,
+
+          name:
+            data.localname ||
+            data.name ||
+            "Place",
+
+          location: {
+            address:
+              data.addresstags
+                ? Object.values(data.addresstags).join(", ")
+                : null,
+
+            coordinates: {
+              lat: Number.isFinite(lat)
+                ? lat
+                : null,
+
+              lng: Number.isFinite(lon)
+                ? lon
+                : null,
+            },
+          },
+
+          address:
+            data.address || {},
+
+          extratags:
+            data.extratags || {},
+        },
       },
     });
   } catch (error) {
-    console.error("Get place details error:", error);
-    res.status(500).json({
+    console.error(
+      "Get place details error:",
+      error.response?.status,
+      error.response?.data || error.message
+    );
+
+    return res.status(502).json({
       success: false,
-      message: "Failed to get place details",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message:
+        "Place details provider is temporarily unavailable",
     });
   }
 };
 
-// Get directions between two points
+// --------------------------------------------------
+// DIRECTIONS - OSRM
+// --------------------------------------------------
+
 const getDirections = async (req, res) => {
   try {
     const errors = validationResult(req);
+
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
@@ -269,87 +435,161 @@ const getDirections = async (req, res) => {
     const {
       origin,
       destination,
-      mode = "driving", // driving, walking, transit, bicycling
+      mode = "driving",
       waypoints,
       alternatives = false,
     } = req.query;
 
-    // In production, use Google Directions API
-    const directions = {
-      routes: [
-        {
-          summary: "via FDR Dr",
-          distance: "8.2 miles",
-          duration: "22 minutes",
-          steps: [
-            {
-              instruction: "Head north on 5th Ave toward E 59th St",
-              distance: "0.3 miles",
-              duration: "2 minutes",
-              maneuver: "turn-right",
-            },
-            {
-              instruction: "Turn right onto FDR Dr",
-              distance: "5.8 miles",
-              duration: "15 minutes",
-              maneuver: "turn-right",
-            },
-            {
-              instruction: "Take exit 18 for Brooklyn Bridge",
-              distance: "2.1 miles",
-              duration: "5 minutes",
-              maneuver: "exit-right",
-            },
-          ],
-          trafficCondition: "moderate",
-          estimatedCost: {
-            fuel: 2.5,
-            tolls: 0,
-            parking: 15,
-            currency: "USD",
-          },
-        },
-      ],
-      alternatives: alternatives
-        ? [
-            {
-              summary: "via West Side Hwy",
-              distance: "9.1 miles",
-              duration: "28 minutes",
-              description: "Slightly longer but scenic route",
-            },
-          ]
-        : [],
-      origin: {
-        name: origin,
-        coordinates: { lat: 40.7648, lng: -73.9754 },
-      },
-      destination: {
-        name: destination,
-        coordinates: { lat: 40.7061, lng: -74.0087 },
-      },
-      mode,
-      waypoints: waypoints ? waypoints.split("|") : [],
-    };
+    if (!origin || !destination) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Origin and destination are required",
+      });
+    }
 
-    res.json({
+    /*
+      Format:
+
+      origin=77.2090,28.6139
+      destination=77.1025,28.7041
+
+      OSRM:
+      longitude,latitude
+    */
+
+    const profile =
+      mode === "walking"
+        ? "foot"
+        : mode === "bicycling"
+        ? "bike"
+        : "driving";
+
+    const waypointList = waypoints
+      ? waypoints
+          .split("|")
+          .filter(Boolean)
+      : [];
+
+    const coordinates = [
+      origin,
+      ...waypointList,
+      destination,
+    ].join(";");
+
+    const response = await axios.get(
+      `${OSRM_URL}/route/v1/${profile}/${coordinates}`,
+      {
+        params: {
+          overview: "full",
+          geometries: "geojson",
+          steps: true,
+          alternatives:
+            alternatives === true ||
+            alternatives === "true",
+        },
+
+        timeout: 20000,
+      }
+    );
+
+    const routes = response.data.routes || [];
+
+    const formattedRoutes = routes.map(
+      (route) => ({
+        summary:
+          route.legs
+            ?.map((leg) => leg.summary)
+            .filter(Boolean)
+            .join(" → ") ||
+          "Route",
+
+        distance: {
+          meters: Math.round(
+            route.distance || 0
+          ),
+
+          text: formatDistance(
+            route.distance || 0
+          ),
+        },
+
+        duration: {
+          seconds: Math.round(
+            route.duration || 0
+          ),
+
+          text: `${Math.round(
+            (route.duration || 0) / 60
+          )} minutes`,
+        },
+
+        geometry: route.geometry,
+
+        steps:
+          route.legs
+            ?.flatMap(
+              (leg) => leg.steps || []
+            )
+            .map((step) => ({
+              instruction:
+                step.name ||
+                step.maneuver?.type ||
+                "Continue",
+
+              distance: Math.round(
+                step.distance || 0
+              ),
+
+              duration: Math.round(
+                step.duration || 0
+              ),
+
+              maneuver:
+                step.maneuver?.modifier ||
+                step.maneuver?.type ||
+                null,
+            })) || [],
+      })
+    );
+
+    return res.json({
       success: true,
-      data: directions,
+
+      data: {
+        routes: formattedRoutes,
+
+        origin,
+        destination,
+
+        mode,
+
+        waypoints: waypointList,
+      },
     });
   } catch (error) {
-    console.error("Get directions error:", error);
-    res.status(500).json({
+    console.error(
+      "Directions provider error:",
+      error.response?.status,
+      error.response?.data || error.message
+    );
+
+    return res.status(502).json({
       success: false,
-      message: "Failed to get directions",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message:
+        "Routing provider is temporarily unavailable",
     });
   }
 };
 
-// Get nearby places
+// --------------------------------------------------
+// NEARBY PLACES - OVERPASS
+// --------------------------------------------------
+
 const getNearbyPlaces = async (req, res) => {
   try {
     const errors = validationResult(req);
+
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
@@ -358,244 +598,670 @@ const getNearbyPlaces = async (req, res) => {
       });
     }
 
-    const {
-      latitude,
-      longitude,
-      radius = 1000,
-      type = "all",
-      keyword,
-    } = req.query;
+    /*
+      IMPORTANT:
+      Frontend currently sends:
 
-    // In production, use Google Places Nearby Search API
-    let nearbyPlaces = [];
+      ?lat=28.6139
+      &lng=77.2090
 
-    // Mock nearby places based on type
-    if (type === "all" || type === "restaurant") {
-      nearbyPlaces = [...nearbyPlaces, ...mockPlacesData.restaurants];
+      We also support:
+
+      ?latitude=28.6139
+      &longitude=77.2090
+    */
+
+    const { lat, lon } = getCoordinates(
+      req.query
+    );
+
+    const radius =
+      parseInt(req.query.radius, 10) || 1000;
+
+    const type = (
+      req.query.type || "all"
+    ).toLowerCase();
+
+    const keyword =
+      req.query.keyword?.trim() || null;
+
+    if (
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lon)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Valid latitude and longitude are required",
+      });
     }
-    if (type === "all" || type === "attraction") {
-      nearbyPlaces = [...nearbyPlaces, ...mockPlacesData.attractions];
-    }
-    if (type === "all" || type === "hotel") {
-      nearbyPlaces = [...nearbyPlaces, ...mockPlacesData.hotels];
+
+    if (lat < -90 || lat > 90) {
+      return res.status(400).json({
+        success: false,
+        message: "Latitude must be between -90 and 90",
+      });
     }
 
-    // Add distance calculation (mock)
-    nearbyPlaces = nearbyPlaces.map((place) => ({
-      ...place,
-      distance: Math.round(Math.random() * parseInt(radius)),
-      walkingTime: Math.round(Math.random() * 15) + 1,
-    }));
+    if (lon < -180 || lon > 180) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Longitude must be between -180 and 180",
+      });
+    }
 
-    // Filter by keyword
-    if (keyword) {
-      nearbyPlaces = nearbyPlaces.filter(
-        (place) =>
-          place.name.toLowerCase().includes(keyword.toLowerCase()) ||
-          (place.category &&
-            place.category.toLowerCase().includes(keyword.toLowerCase()))
+    if (
+      !Number.isFinite(radius) ||
+      radius <= 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Radius must be a positive number",
+      });
+    }
+
+    const safeRadius = Math.min(
+      radius,
+      10000
+    );
+
+    // ------------------------------------------------
+    // BUILD OVERPASS FILTERS
+    // ------------------------------------------------
+
+    const filters = [];
+
+    const addFilter = (filter) => {
+      filters.push(`
+        nwr(
+          around:${safeRadius},
+          ${lat},
+          ${lon}
+        )
+        ${filter};
+      `);
+    };
+
+    // Restaurants / cafes
+    if (
+      type === "all" ||
+      type === "restaurant" ||
+      type === "restaurants" ||
+      type === "food"
+    ) {
+      addFilter(
+        `["amenity"="restaurant"]`
+      );
+
+      addFilter(
+        `["amenity"="cafe"]`
+      );
+
+      addFilter(
+        `["amenity"="fast_food"]`
       );
     }
 
-    // Sort by distance
-    nearbyPlaces.sort((a, b) => a.distance - b.distance);
+    // Attractions
+    if (
+      type === "all" ||
+      type === "attraction" ||
+      type === "attractions" ||
+      type === "tourist_attraction" ||
+      type === "tourist-attraction"
+    ) {
+      addFilter(
+        `["tourism"="attraction"]`
+      );
 
-    res.json({
-      success: true,
-      data: {
-        places: nearbyPlaces,
-        center: {
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude),
+      addFilter(
+        `["tourism"="museum"]`
+      );
+
+      addFilter(
+        `["tourism"="gallery"]`
+      );
+
+      addFilter(
+        `["tourism"="viewpoint"]`
+      );
+
+      addFilter(
+        `["historic"]`
+      );
+
+      addFilter(
+        `["leisure"="park"]`
+      );
+    }
+
+    // Hotels
+    if (
+      type === "all" ||
+      type === "hotel" ||
+      type === "hotels" ||
+      type === "lodging"
+    ) {
+      addFilter(
+        `["tourism"="hotel"]`
+      );
+    }
+
+    if (filters.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid type. Use restaurant, attraction, tourist_attraction, hotel, or all",
+      });
+    }
+
+    // ------------------------------------------------
+    // OVERPASS QUERY
+    // ------------------------------------------------
+
+    const overpassQuery = `
+      [out:json][timeout:25];
+
+      (
+        ${filters.join("\n")}
+      );
+
+      out center tags;
+    `;
+
+    console.log(
+      `Overpass request: ${type}, ${lat}, ${lon}, radius=${safeRadius}`
+    );
+
+    const response = await axios.post(
+      OVERPASS_URL,
+      overpassQuery,
+      {
+        headers: {
+          ...HTTP_HEADERS,
+          "Content-Type":
+            "text/plain; charset=utf-8",
         },
-        radius: parseInt(radius),
-        totalResults: nearbyPlaces.length,
+
+        timeout: 30000,
+
+        maxContentLength:
+          10 * 1024 * 1024,
+
+        maxBodyLength:
+          10 * 1024 * 1024,
+      }
+    );
+
+    const elements =
+      response.data?.elements || [];
+
+    // ------------------------------------------------
+    // CONVERT OSM DATA
+    // ------------------------------------------------
+
+    let nearbyPlaces = elements
+      .map((element) =>
+        convertOSMPlace(
+          element,
+          lat,
+          lon
+        )
+      )
+      .filter(Boolean);
+
+    // Remove unnamed places
+    nearbyPlaces =
+      nearbyPlaces.filter(
+        (place) =>
+          place.name &&
+          place.name !== "Unnamed Place"
+      );
+
+    // ------------------------------------------------
+    // KEYWORD FILTER
+    // ------------------------------------------------
+
+    if (keyword) {
+      const keywordLower =
+        keyword.toLowerCase();
+
+      nearbyPlaces =
+        nearbyPlaces.filter(
+          (place) =>
+            place.name
+              .toLowerCase()
+              .includes(keywordLower) ||
+            place.category
+              .toLowerCase()
+              .includes(keywordLower) ||
+            place.cuisineType
+              ?.toLowerCase()
+              .includes(keywordLower)
+        );
+    }
+
+    // ------------------------------------------------
+    // REMOVE DUPLICATES
+    // ------------------------------------------------
+
+    const uniquePlaces =
+      Array.from(
+        new Map(
+          nearbyPlaces.map(
+            (place) => [
+              place.id,
+              place,
+            ]
+          )
+        ).values()
+      );
+
+    // ------------------------------------------------
+    // SORT BY REAL DISTANCE
+    // ------------------------------------------------
+
+    uniquePlaces.sort(
+      (a, b) =>
+        a.distance - b.distance
+    );
+
+    console.log(
+      `Overpass returned ${uniquePlaces.length} places`
+    );
+
+    return res.json({
+      success: true,
+
+      data: {
+        places: uniquePlaces,
+
+        center: {
+          latitude: lat,
+          longitude: lon,
+        },
+
+        radius: safeRadius,
+
+        totalResults:
+          uniquePlaces.length,
       },
     });
   } catch (error) {
-    console.error("Get nearby places error:", error);
-    res.status(500).json({
+    console.error(
+      "Nearby places provider error:"
+    );
+
+    console.error(
+      "Status:",
+      error.response?.status
+    );
+
+    console.error(
+      "Message:",
+      error.message
+    );
+
+    console.error(
+      "Response:",
+      error.response?.data
+    );
+
+    return res.status(502).json({
       success: false,
-      message: "Failed to get nearby places",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+
+      message:
+        "Nearby places provider is temporarily unavailable",
+
+      provider:
+        "OpenStreetMap Overpass",
     });
   }
 };
 
-// Geocode address
+// --------------------------------------------------
+// GEOCODING - NOMINATIM
+// --------------------------------------------------
+
 const geocodeAddress = async (req, res) => {
   try {
     const { address } = req.query;
 
-    if (!address) {
+    if (!address?.trim()) {
       return res.status(400).json({
         success: false,
         message: "Address is required",
       });
     }
 
-    // In production, use Google Geocoding API
-    const geocodeResult = {
-      results: [
-        {
-          formatted_address: "768 5th Ave, New York, NY 10019, USA",
-          geometry: {
-            location: { lat: 40.7648, lng: -73.9754 },
-            location_type: "ROOFTOP",
-            viewport: {
-              northeast: { lat: 40.7661, lng: -73.9741 },
-              southwest: { lat: 40.7635, lng: -73.9767 },
-            },
-          },
-          place_id: "ChIJUxNHs4xZwokRCEtRWE04_Vw",
-          types: ["street_address"],
-          address_components: [
-            { long_name: "768", short_name: "768", types: ["street_number"] },
-            {
-              long_name: "5th Avenue",
-              short_name: "5th Ave",
-              types: ["route"],
-            },
-            {
-              long_name: "Manhattan",
-              short_name: "Manhattan",
-              types: ["sublocality"],
-            },
-            {
-              long_name: "New York",
-              short_name: "New York",
-              types: ["locality"],
-            },
-            {
-              long_name: "New York",
-              short_name: "NY",
-              types: ["administrative_area_level_1"],
-            },
-            {
-              long_name: "United States",
-              short_name: "US",
-              types: ["country"],
-            },
-            { long_name: "10019", short_name: "10019", types: ["postal_code"] },
-          ],
+    const response = await axios.get(
+      `${NOMINATIM_URL}/search`,
+      {
+        params: {
+          q: address.trim(),
+          format: "json",
+          addressdetails: 1,
+          limit: 5,
         },
-      ],
-      status: "OK",
-    };
 
-    res.json({
+        headers: HTTP_HEADERS,
+        timeout: 10000,
+      }
+    );
+
+    const results =
+      response.data.map((item) => ({
+        formatted_address:
+          item.display_name,
+
+        geometry: {
+          location: {
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+          },
+        },
+
+        place_id:
+          `osm_${item.osm_type}_${item.osm_id}`,
+
+        type: item.type,
+
+        address_components:
+          item.address || {},
+      }));
+
+    return res.json({
       success: true,
-      data: geocodeResult,
+
+      data: {
+        results,
+
+        status:
+          results.length > 0
+            ? "OK"
+            : "ZERO_RESULTS",
+      },
     });
   } catch (error) {
-    console.error("Geocode address error:", error);
-    res.status(500).json({
+    console.error(
+      "Geocode provider error:",
+      error.response?.status,
+      error.response?.data || error.message
+    );
+
+    return res.status(502).json({
       success: false,
-      message: "Failed to geocode address",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message:
+        "Geocoding provider is temporarily unavailable",
     });
   }
 };
 
-// Reverse geocode coordinates
+// --------------------------------------------------
+// REVERSE GEOCODING - NOMINATIM
+// --------------------------------------------------
+
 const reverseGeocode = async (req, res) => {
   try {
-    const { latitude, longitude } = req.query;
+    const { lat, lon } =
+      getCoordinates(req.query);
 
-    if (!latitude || !longitude) {
+    if (
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lon)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Latitude and longitude are required",
+        message:
+          "Valid latitude and longitude are required",
       });
     }
 
-    // In production, use Google Reverse Geocoding API
-    const reverseGeocodeResult = {
-      results: [
-        {
-          formatted_address: "768 5th Ave, New York, NY 10019, USA",
-          types: ["street_address"],
-          place_id: "ChIJUxNHs4xZwokRCEtRWE04_Vw",
+    const response = await axios.get(
+      `${NOMINATIM_URL}/reverse`,
+      {
+        params: {
+          lat,
+          lon,
+          format: "json",
+          addressdetails: 1,
         },
-        {
-          formatted_address: "Midtown Manhattan, New York, NY, USA",
-          types: ["neighborhood", "political"],
-        },
-        {
-          formatted_address: "New York, NY, USA",
-          types: ["locality", "political"],
-        },
-      ],
-      status: "OK",
-    };
 
-    res.json({
+        headers: HTTP_HEADERS,
+        timeout: 10000,
+      }
+    );
+
+    const data = response.data;
+
+    return res.json({
       success: true,
-      data: reverseGeocodeResult,
+
+      data: {
+        results: [
+          {
+            formatted_address:
+              data.display_name,
+
+            types: [
+              data.type || "place",
+            ],
+
+            place_id:
+              data.osm_id
+                ? `osm_${data.osm_type}_${data.osm_id}`
+                : null,
+
+            address:
+              data.address || {},
+          },
+        ],
+
+        status: "OK",
+      },
     });
   } catch (error) {
-    console.error("Reverse geocode error:", error);
-    res.status(500).json({
+    console.error(
+      "Reverse geocode provider error:",
+      error.response?.status,
+      error.response?.data || error.message
+    );
+
+    return res.status(502).json({
       success: false,
-      message: "Failed to reverse geocode coordinates",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message:
+        "Reverse geocoding provider is temporarily unavailable",
     });
   }
 };
 
-// Get travel time matrix
-const getTravelTimeMatrix = async (req, res) => {
+// --------------------------------------------------
+// TRAVEL TIME MATRIX - OSRM
+// --------------------------------------------------
+
+const getTravelTimeMatrix = async (
+  req,
+  res
+) => {
   try {
     const {
       origins,
       destinations,
       mode = "driving",
-      units = "metric",
     } = req.query;
 
     if (!origins || !destinations) {
       return res.status(400).json({
         success: false,
-        message: "Origins and destinations are required",
+        message:
+          "Origins and destinations are required",
       });
     }
 
-    // In production, use Google Distance Matrix API
-    const matrix = {
-      origin_addresses: origins.split("|"),
-      destination_addresses: destinations.split("|"),
-      rows: [
-        {
-          elements: [
-            {
-              distance: { text: "8.2 mi", value: 13200 },
-              duration: { text: "22 mins", value: 1320 },
-              status: "OK",
-            },
-            {
-              distance: { text: "12.1 mi", value: 19500 },
-              duration: { text: "35 mins", value: 2100 },
-              status: "OK",
-            },
-          ],
-        },
-      ],
-      status: "OK",
-    };
+    const profile =
+      mode === "walking"
+        ? "foot"
+        : mode === "bicycling"
+        ? "bike"
+        : "driving";
 
-    res.json({
+    const originList =
+      origins
+        .split("|")
+        .filter(Boolean);
+
+    const destinationList =
+      destinations
+        .split("|")
+        .filter(Boolean);
+
+    if (
+      originList.length === 0 ||
+      destinationList.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Valid origins and destinations are required",
+      });
+    }
+
+    const allCoordinates = [
+      ...originList,
+      ...destinationList,
+    ];
+
+    const uniqueCoordinates = [
+      ...new Set(allCoordinates),
+    ];
+
+    const coordinates =
+      uniqueCoordinates.join(";");
+
+    const response = await axios.get(
+      `${OSRM_URL}/table/v1/${profile}/${coordinates}`,
+      {
+        params: {
+          annotations:
+            "duration,distance",
+        },
+
+        timeout: 20000,
+      }
+    );
+
+    const indexMap = new Map();
+
+    uniqueCoordinates.forEach(
+      (coordinate, index) => {
+        indexMap.set(
+          coordinate,
+          index
+        );
+      }
+    );
+
+    const rows = originList.map(
+      (origin) => {
+        const originIndex =
+          indexMap.get(origin);
+
+        return {
+          elements:
+            destinationList.map(
+              (destination) => {
+                const destinationIndex =
+                  indexMap.get(
+                    destination
+                  );
+
+                const distance =
+                  response.data
+                    .distances?.[
+                      originIndex
+                    ]?.[destinationIndex];
+
+                const duration =
+                  response.data
+                    .durations?.[
+                      originIndex
+                    ]?.[destinationIndex];
+
+                if (
+                  distance == null ||
+                  duration == null
+                ) {
+                  return {
+                    status:
+                      "ZERO_RESULTS",
+                  };
+                }
+
+                return {
+                  distance: {
+                    text:
+                      formatDistance(
+                        distance
+                      ),
+
+                    value: Math.round(
+                      distance
+                    ),
+                  },
+
+                  duration: {
+                    text: `${Math.round(
+                      duration / 60
+                    )} mins`,
+
+                    value: Math.round(
+                      duration
+                    ),
+                  },
+
+                  status: "OK",
+                };
+              }
+            ),
+        };
+      }
+    );
+
+    return res.json({
       success: true,
-      data: matrix,
+
+      data: {
+        origin_addresses:
+          originList,
+
+        destination_addresses:
+          destinationList,
+
+        rows,
+
+        status: "OK",
+      },
     });
   } catch (error) {
-    console.error("Get travel time matrix error:", error);
-    res.status(500).json({
+    console.error(
+      "Travel matrix provider error:",
+      error.response?.status,
+      error.response?.data || error.message
+    );
+
+    return res.status(502).json({
       success: false,
-      message: "Failed to get travel time matrix",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message:
+        "Travel time provider is temporarily unavailable",
     });
   }
 };
+
+// --------------------------------------------------
+// EXPORT
+// --------------------------------------------------
 
 module.exports = {
   searchPlaces,

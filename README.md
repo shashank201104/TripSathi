@@ -157,6 +157,43 @@ Built a JWT-based authentication system with protected routes and secure session
 
 ---
 
+## Public SEO Pages and Deployment
+
+The public landing page, destination guides, travel articles, About, Contact, and
+Privacy pages are generated as static HTML during the client production build.
+The authenticated planning application remains a React client-side app. Public
+content is maintained in `client/src/data/destinations.json` and
+`client/src/data/articles.json`; the post-build script writes the page files,
+`sitemap.xml`, and the custom 404 page into `client/build`.
+
+For Vercel, keep the project root set to the repository root so
+[`vercel.json`](./vercel.json) can run the root build script and publish
+`client/build`. Deploying with `client` as the project root will not use this
+root deployment configuration.
+
+Configure these values in the relevant deployment environment:
+
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `REACT_APP_API_URL` | Vercel build | Public API base URL, for example `https://tripsathi.onrender.com/api`. |
+| `REACT_APP_GA_MEASUREMENT_ID` | Vercel build (optional) | Enables consent-gated Google Analytics 4. Analytics is not loaded until a visitor opts in. |
+| `REACT_APP_GOOGLE_SITE_VERIFICATION` | Vercel build (optional) | The verification token supplied by Google Search Console. Adding it to the HTML does not itself verify an account or property. |
+| `ALLOWED_ORIGINS` | Render server | Comma-separated frontend origins permitted by the API's CORS configuration. |
+| `CONTACT_EMAIL_TO`, `CONTACT_EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | Render server | Enables delivery for the public contact form. `SMTP_SECURE=true` may be set for providers requiring implicit TLS. |
+
+Never put Gemini credentials, SMTP passwords, JWT secrets, or other private
+server credentials in `REACT_APP_*` variables; CRA embeds those values in the
+public frontend bundle. Without SMTP configuration, the contact endpoint
+returns an explicit unavailable response rather than pretending a message was
+sent.
+
+After deployment, add and verify the production property in Google Search
+Console, then submit `https://trip-sathi-gray.vercel.app/sitemap.xml`. Confirm
+that the property, sitemap fetch, canonical URLs, redirect behavior, and
+rendered public pages are correct in the deployed environment.
+
+---
+
 ## License
 
 This project was developed for educational and portfolio purposes.

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { tripAPI } from "../../services/api";
+import { trackEvent } from "../seo/Analytics";
 import {
   FaMapMarkerAlt,
   FaClock,
@@ -21,7 +22,6 @@ import {
 
 const TripDetailView = ({ itinerary, formValues, onClose }) => {
   const [expandedDays, setExpandedDays] = useState([0]); // First day expanded by default
-  const [imageErrors, setImageErrors] = useState({});
   const [isAddingTrip, setIsAddingTrip] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const navigate = useNavigate();
@@ -268,10 +268,6 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
         destination: {
           city: city,
           country: country,
-          coordinates: {
-            lat: 0,
-            lng: 0,
-          },
         },
         preferences: {
           budget: {
@@ -322,14 +318,13 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
       const response = await tripAPI.createTrip(tripData);
       console.log("Response:", response);
 
-      if (response.data.success || response.data.trip) {
+      if (response.data.success && response.data.trip?._id) {
         toast.success("Trip added successfully!", { id: "add-trip" });
         // Invalidate trips cache to refresh the trips list
         queryClient.invalidateQueries({ queryKey: ["trips"] });
+        trackEvent("trip_saved");
         onClose();
-        setTimeout(() => {
-          navigate("/trips");
-        }, 500);
+        navigate(`/trips/${response.data.trip._id}`);
       } else {
         throw new Error(response.data.message || "Failed to add trip");
       }
@@ -517,10 +512,6 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
     return activityImages.default;
   };
 
-  const handleImageError = (key) => {
-    setImageErrors((prev) => ({ ...prev, [key]: true }));
-  };
-
   // Get destination header image
   const getHeaderImage = () => {
     const destinationImages = {
@@ -637,7 +628,7 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
 
               <div className="bg-accent-muted border border-border p-2 md:p-6 rounded-xl">
                 <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3 mb-1 md:mb-2">
-                  <div className="bg-purple-600 p-1.5 md:p-3 rounded-lg">
+                  <div className="bg-accent p-1.5 md:p-3 rounded-lg">
                     <FaStar className="h-4 w-4 md:h-6 md:w-6 text-white" />
                   </div>
                   <div className="text-center md:text-left">
@@ -809,7 +800,6 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
                               </h5>
                               <div className="space-y-4">
                                 {day.activities?.map((activity, actIdx) => {
-                                  const imageKey = `${dayIndex}-${actIdx}`;
                                   return (
                                     <div
                                       key={actIdx}
@@ -834,7 +824,7 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
                                           <p className="font-semibold text-xs md:text-base text-text-primary mr-2">
                                             {activity.activity}
                                           </p>
-                                          <span className="flex-shrink-0 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-sm font-medium">
+                                          <span className="flex-shrink-0 bg-accent-muted text-accent px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-sm font-medium">
                                             {activity.cost?.currency}{" "}
                                             {activity.cost?.amount}
                                           </span>
@@ -900,9 +890,9 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
 
                             {/* Accommodation */}
                             {day.accommodation && (
-                              <div className="bg-purple-50 dark:bg-purple-900/20 p-2 md:p-4 rounded-lg">
+                              <div className="bg-accent-muted p-2 md:p-4 rounded-lg">
                                 <h5 className="font-semibold text-sm md:text-base text-text-primary mb-2 md:mb-4 flex items-center gap-2">
-                                  <FaHotel className="text-purple-600" />
+                                  <FaHotel className="text-accent" />
                                   Accommodation
                                 </h5>
                                 <div className="flex items-center justify-between">
@@ -914,7 +904,7 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
                                       {day.accommodation.type}
                                     </p>
                                   </div>
-                                  <p className="text-purple-600 dark:text-purple-400 font-semibold">
+                                  <p className="text-accent font-semibold">
                                     {day.accommodation.cost?.currency}{" "}
                                     {day.accommodation.cost?.amount}
                                   </p>
@@ -938,7 +928,7 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
                 whileTap={{ scale: 0.98 }}
                 onClick={handleDownloadPDF}
                 disabled={isDownloading}
-                className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold py-2 px-3 md:py-4 md:px-6 rounded-xl transition-all flex items-center justify-center gap-1 md:gap-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-base"
+                className="bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white font-semibold py-2 px-3 md:py-4 md:px-6 rounded-xl transition-all flex items-center justify-center gap-1 md:gap-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-base"
               >
                 <FaDownload className={isDownloading ? "animate-bounce" : ""} />
                 <span className="md:inline">{isDownloading ? "Generating..." : "Download PDF"}</span>
@@ -950,7 +940,7 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
                 whileTap={{ scale: 0.98 }}
                 onClick={handleAddTrip}
                 disabled={isAddingTrip}
-                className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white font-semibold py-2 px-3 md:py-4 md:px-6 rounded-xl transition-all flex items-center justify-center gap-1 md:gap-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-base"
+                className="bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2 px-3 md:py-4 md:px-6 rounded-xl transition-all flex items-center justify-center gap-1 md:gap-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-base"
               >
                 <FaPlus className={isAddingTrip ? "animate-spin" : ""} />
                 {isAddingTrip ? "Adding..." : "Add Trip"}

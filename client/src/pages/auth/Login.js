@@ -17,12 +17,16 @@ const Login = () => {
     useFormValidation(
       { email: "", password: "", rememberMe: false },
       {
-        email: { required: true, email: true },
-        password: { required: true, minLength: 8 },
+        email: { required: true, email: true, trim: true, maxLength: 254 },
+        password: { required: true, minLength: 8, maxLength: 128 },
       }
     );
 
-  const from = location.state?.from?.pathname || "/dashboard";
+  const requestedPath = location.state?.from?.pathname;
+  const from =
+    requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
+      ? `${requestedPath}${location.state.from.search || ""}`
+      : "/dashboard";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,7 +34,7 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const result = await login(values.email, values.password);
+      const result = await login(values.email.trim().toLowerCase(), values.password);
       if (result.success) {
         navigate(from, { replace: true });
       }
@@ -43,24 +47,19 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-bg flex">
-      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-12 border-r border-border">
-        <div className="absolute inset-0 bg-grid-pattern bg-grid opacity-30" />
-        <div className="relative max-w-md">
+      <div className="auth-visual hidden lg:flex lg:w-1/2 relative items-end p-12">
+        <div className="relative max-w-md text-white">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-lg bg-accent-muted border border-accent/20 flex items-center justify-center">
-              <FaRoute className="h-5 w-5 text-accent" />
+              <FaRoute className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-display font-bold text-text-primary">TripSathi</h2>
-              <p className="text-xs font-mono text-text-secondary uppercase tracking-wider">Travel OS</p>
+              <h2 className="text-2xl font-display font-bold text-white">TripSathi</h2>
             </div>
           </div>
-          <h3 className="text-3xl font-display font-bold text-text-primary mb-4">
-            Welcome back
+          <h3 className="text-3xl font-display font-bold text-white mb-4">
+            The journey begins before you leave.
           </h3>
-          <p className="text-text-secondary leading-relaxed">
-            Sign in to access your trips, AI recommendations, and personalized travel plans.
-          </p>
         </div>
       </div>
 
@@ -70,20 +69,21 @@ const Login = () => {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md"
         >
-          <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-accent-muted border border-accent/20 mb-3">
-              <FaRoute className="h-5 w-5 text-accent" />
-            </div>
-            <h2 className="text-xl font-display font-bold text-text-primary">Welcome back</h2>
+          <div className="lg:hidden text-center mb-6">
+            <span className="font-display text-xl font-bold text-accent">TripSathi</span>
           </div>
 
-          <Card elevated className="p-6 md:p-8">
+          <Card elevated className="auth-form-card p-6 md:p-8">
+            <p className="section-label mb-3">Welcome back</p>
+            <h1 className="mb-7 text-3xl font-bold">Good to see you.</h1>
             <form onSubmit={handleSubmit} className="space-y-5">
               <Input
                 name="email"
                 type="email"
                 label="Email"
                 placeholder="you@example.com"
+                autoComplete="username"
+                maxLength={254}
                 icon={FaEnvelope}
                 value={values.email}
                 onChange={handleChange}
@@ -97,6 +97,9 @@ const Login = () => {
                 type={showPassword ? "text" : "password"}
                 label="Password"
                 placeholder="Enter password"
+                autoComplete="current-password"
+                maxLength={128}
+                minLength={8}
                 icon={FaLock}
                 value={values.password}
                 onChange={handleChange}
@@ -142,7 +145,11 @@ const Login = () => {
 
               <p className="text-center text-sm text-text-secondary">
                 Don&apos;t have an account?{" "}
-                <Link to="/register" className="font-semibold text-accent hover:underline">
+                <Link
+                  to="/register"
+                  state={{ from: location.state?.from }}
+                  className="font-semibold text-accent hover:underline"
+                >
                   Sign up
                 </Link>
               </p>

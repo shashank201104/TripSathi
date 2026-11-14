@@ -1,21 +1,16 @@
 import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useAuth } from "../../contexts/AuthContext";
 import Navbar from "./Navbar";
-import Sidebar from "./Sidebar";
 import Footer from "./Footer";
 
 const Layout = ({
   children,
-  showSidebar = false,
   fullScreen = false,
   showNavbarOnly = false,
 }) => {
-  const { isAuthenticated } = useAuth();
   const location = useLocation();
 
-  const shouldShowSidebar = showSidebar && isAuthenticated;
   const shouldShowFooter = location.pathname === "/";
 
   if (fullScreen) {
@@ -42,12 +37,6 @@ const Layout = ({
       </div>
 
       <div className="flex flex-1 relative">
-        {shouldShowSidebar && (
-          <aside className="hidden lg:block w-72 flex-shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto border-r border-border">
-            <Sidebar />
-          </aside>
-        )}
-
         <main className="flex-1 w-full min-w-0">
           <motion.div
             initial={{ opacity: 0, y: 12 }}

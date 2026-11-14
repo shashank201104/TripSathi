@@ -12,35 +12,71 @@ const router = express.Router();
  */
 router.get("/places/nearby", async (req, res) => {
   try {
-    const { lat, lng, radius = 5000, type = "tourist_attraction", keyword } = req.query;
+    const {
+      lat,
+      lng,
+      radius = 5000,
+      type = "tourist_attraction",
+      keyword,
+    } = req.query;
 
-    if (!lat || !lng) {
+    const latitude = Number(lat);
+    const longitude = Number(lng);
+    const radiusMeters = Number(radius);
+
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180 ||
+      (latitude === 0 && longitude === 0)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Latitude and longitude are required",
+        message: "Valid latitude and longitude are required",
       });
     }
 
-    const location = `${lat},${lng}`;
-    const data = await freeMapService.nearbySearch(
-      location,
-      parseInt(radius, 10),
-      type,
-      keyword
-    );
+    if (
+      !Number.isFinite(radiusMeters) ||
+      radiusMeters < 100 ||
+      radiusMeters > 50000
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Radius must be between 100 and 50000 meters",
+      });
+    }
 
-    res.json({
+
+    const places = await freeMapService.nearbySearch({
+      lat: latitude,
+      lng: longitude,
+      radius: radiusMeters,
+      type,
+      keyword,
+    });
+
+    return res.status(200).json({
       success: true,
       data: {
-        places: data.results,
-        status: data.status
+        places,
+        status: "OK",
       },
     });
+
   } catch (error) {
     logger.error("Nearby places error:", error);
-    res.status(500).json({
+
+    return res.status(502).json({
       success: false,
-      message: "Error fetching nearby places",
+      message: "The map provider could not load nearby places. Please retry.",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : undefined,
     });
   }
 });

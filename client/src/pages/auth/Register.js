@@ -1,8 +1,14 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFormValidation } from "../../hooks/useFormValidation";
+import {
+  NAME_PATTERN,
+  NEW_PASSWORD_MAX_LENGTH,
+  NEW_PASSWORD_MIN_LENGTH,
+  validateNewPassword,
+} from "../../utils/authValidation";
 import { Button, Input, Card } from "../../components/ui";
 import {
   FaRoute,
@@ -21,14 +27,34 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+
+  const requestedPath = location.state?.from?.pathname;
+  const from =
+    requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
+      ? `${requestedPath}${location.state.from.search || ""}`
+      : "/dashboard";
 
   const { values, errors, handleChange, handleBlur, isValid } =
     useFormValidation(
       { name: "", email: "", password: "", confirmPassword: "" },
       {
-        name: { required: true, minLength: 2 },
-        email: { required: true, email: true },
-        password: { required: true, minLength: 8 },
+        name: {
+          required: true,
+          trim: true,
+          minLength: 2,
+          maxLength: 50,
+          pattern: NAME_PATTERN,
+          message: "Enter a valid name using letters, spaces, hyphens, or apostrophes.",
+        },
+        email: { required: true, email: true, trim: true, maxLength: 254 },
+        password: {
+          required: true,
+          minLength: NEW_PASSWORD_MIN_LENGTH,
+          maxLength: NEW_PASSWORD_MAX_LENGTH,
+          validate: validateNewPassword,
+        },
         confirmPassword: {
           required: true,
           validate: (value, allValues) => {
@@ -46,12 +72,13 @@ const Register = () => {
     setIsLoading(true);
     try {
       const result = await registerUser({
-        name: values.name,
-        email: values.email,
+        name: values.name.trim(),
+        email: values.email.trim().toLowerCase(),
         password: values.password,
+        privacyPolicyAccepted: privacyAccepted,
       });
       if (result.success) {
-        navigate("/dashboard");
+        navigate(from, { replace: true });
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -62,34 +89,19 @@ const Register = () => {
 
   return (
     <div className="min-h-screen bg-bg flex">
-      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-12 border-r border-border">
-        <div className="absolute inset-0 bg-grid-pattern bg-grid opacity-30" />
-        <div className="relative max-w-md">
+      <div className="auth-visual hidden lg:flex lg:w-1/2 relative items-end p-12">
+        <div className="relative max-w-md text-white">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-lg bg-accent-muted border border-accent/20 flex items-center justify-center">
-              <FaRoute className="h-5 w-5 text-accent" />
+              <FaRoute className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-display font-bold text-text-primary">TripSathi</h2>
-              <p className="text-xs font-mono text-text-secondary uppercase tracking-wider">Travel OS</p>
+              <h2 className="text-2xl font-display font-bold text-white">TripSathi</h2>
             </div>
           </div>
-          <h3 className="text-3xl font-display font-bold text-text-primary mb-4">
-            Start your journey
+          <h3 className="text-3xl font-display font-bold text-white mb-4">
+            The journey begins before you leave.
           </h3>
-          <p className="text-text-secondary leading-relaxed mb-8">
-            Create an account to unlock AI-powered trip planning, interactive maps, and seamless itinerary management.
-          </p>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm text-text-secondary">
-              <FaRocket className="h-4 w-4 text-accent" />
-              AI-powered trip planning
-            </div>
-            <div className="flex items-center gap-3 text-sm text-text-secondary">
-              <FaShieldAlt className="h-4 w-4 text-success" />
-              Secure & private
-            </div>
-          </div>
         </div>
       </div>
 
@@ -99,17 +111,21 @@ const Register = () => {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md"
         >
-          <div className="lg:hidden text-center mb-8">
-            <h2 className="text-xl font-display font-bold text-text-primary">Create account</h2>
+          <div className="lg:hidden text-center mb-6">
+            <span className="font-display text-xl font-bold text-accent">TripSathi</span>
           </div>
 
-          <Card elevated className="p-6 md:p-8">
+          <Card elevated className="auth-form-card p-6 md:p-8">
+            <p className="section-label mb-3">Start your journey</p>
+            <h1 className="mb-7 text-3xl font-bold">Create your account</h1>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 name="name"
                 type="text"
                 label="Full Name"
                 placeholder="Your name"
+                autoComplete="name"
+                maxLength={50}
                 icon={FaUser}
                 value={values.name}
                 onChange={handleChange}
@@ -123,6 +139,8 @@ const Register = () => {
                 type="email"
                 label="Email"
                 placeholder="you@example.com"
+                autoComplete="email"
+                maxLength={254}
                 icon={FaEnvelope}
                 value={values.email}
                 onChange={handleChange}
@@ -136,6 +154,9 @@ const Register = () => {
                 type={showPassword ? "text" : "password"}
                 label="Password"
                 placeholder="Create password"
+                autoComplete="new-password"
+                minLength={NEW_PASSWORD_MIN_LENGTH}
+                maxLength={NEW_PASSWORD_MAX_LENGTH}
                 icon={FaLock}
                 value={values.password}
                 onChange={handleChange}
@@ -152,12 +173,19 @@ const Register = () => {
                   </button>
                 }
               />
+              <p className="-mt-2 text-xs text-text-secondary">
+                Use at least {NEW_PASSWORD_MIN_LENGTH} characters. Spaces and
+                passphrases are allowed; the maximum is {NEW_PASSWORD_MAX_LENGTH} UTF-8 bytes.
+              </p>
 
               <Input
                 name="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
                 label="Confirm Password"
                 placeholder="Confirm password"
+                autoComplete="new-password"
+                minLength={NEW_PASSWORD_MIN_LENGTH}
+                maxLength={NEW_PASSWORD_MAX_LENGTH}
                 icon={FaLock}
                 value={values.confirmPassword}
                 onChange={handleChange}
@@ -175,12 +203,30 @@ const Register = () => {
                 }
               />
 
+              <div className="flex items-start gap-3">
+                <input
+                  id="privacy-policy-accepted"
+                  type="checkbox"
+                  checked={privacyAccepted}
+                  onChange={(event) => setPrivacyAccepted(event.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                  required
+                />
+                <label htmlFor="privacy-policy-accepted" className="text-sm leading-6 text-text-secondary">
+                  I have read and accept the{" "}
+                  <Link to="/privacy/" className="font-semibold text-accent underline">
+                    Privacy Policy
+                  </Link>
+                  .
+                </label>
+              </div>
+
               <Button
                 type="submit"
                 variant="primary"
                 size="lg"
                 className="w-full mt-2"
-                disabled={!isValid || isLoading}
+                disabled={!isValid || !privacyAccepted || isLoading}
                 loading={isLoading}
               >
                 {isLoading ? "Creating..." : "Create Account"}
@@ -188,7 +234,11 @@ const Register = () => {
 
               <p className="text-center text-sm text-text-secondary">
                 Already have an account?{" "}
-                <Link to="/login" className="font-semibold text-accent hover:underline">
+                <Link
+                  to="/login"
+                  state={{ from: location.state?.from }}
+                  className="font-semibold text-accent hover:underline"
+                >
                   Sign in
                 </Link>
               </p>
