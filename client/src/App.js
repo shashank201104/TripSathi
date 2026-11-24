@@ -1,5 +1,5 @@
-import React from "react";
-import { Routes, Route } from "react-router-dom";
+import React, { useLayoutEffect } from "react";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -8,6 +8,7 @@ import Layout from "./components/layout/Layout";
 
 // Pages
 import Home from "./pages/Home";
+import About from "./pages/About";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import Dashboard from "./pages/Dashboard";
@@ -19,14 +20,27 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 function App() {
+  const location = useLocation();
+
+  useLayoutEffect(() => {
+    if (location.hash) return;
+
+    const root = document.documentElement;
+    const previousScrollBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    window.scrollTo(0, 0);
+    root.style.scrollBehavior = previousScrollBehavior;
+  }, [location.pathname, location.search, location.hash]);
+
   return (
     <AuthProvider>
       <NotificationProvider>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<Layout />}>
+          <Route path="/" element={<Layout showFooter={false} />}>
             <Route index element={<Home />} />
           </Route>
+          <Route path="/about" element={<Layout><About /></Layout>} />
 
           {/* Auth Routes - only accessible when not logged in */}
           <Route path="/auth" element={<Layout fullScreen />}>

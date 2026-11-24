@@ -20,6 +20,26 @@ const {
 
 const router = express.Router();
 
+const validateRefreshOrigin = (req, res, next) => {
+  const origin = req.get("Origin") || req.get("Referer");
+  if (!origin) return next();
+
+  let originUrl;
+  try {
+    originUrl = origin.startsWith("http") ? new URL(origin).origin : origin;
+  } catch (error) {
+    return res.status(403).json({ success: false, message: "Invalid request origin" });
+  }
+
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map((item) => item.trim())
+    : ["http://localhost:3000", "http://127.0.0.1:3000"];
+  if (!allowedOrigins.includes(originUrl)) {
+    return res.status(403).json({ success: false, message: "Request origin is not allowed" });
+  }
+  next();
+};
+
 // Rate limiting for authentication endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -135,7 +155,7 @@ router.post("/login", authLimiter, loginValidation, login);
  * @desc    Refresh access token using refresh token
  * @access  Public (requires refresh token cookie)
  */
-router.post("/refresh", refresh);
+router.post("/refresh", validateRefreshOrigin, refresh);
 
 // =======================
 // PROTECTED ROUTES (Authentication required)

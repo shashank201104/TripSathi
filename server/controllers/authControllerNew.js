@@ -280,27 +280,21 @@ const refresh = async (req, res) => {
     // Generate new access token
     const accessToken = tokenManager.generateAccessToken(user);
 
-    // Optional: Rotate refresh token (10% chance for security)
-    if (Math.random() < 0.1) {
-      const tokens = tokenManager.generateTokenPair(user);
-      const newRefreshTokenHash = tokenManager.hashRefreshToken(
-        tokens.refreshToken
-      );
-      const deviceInfo = tokenManager.getDeviceFingerprint(req);
-
-      await user.removeRefreshToken(refreshTokenHash);
-      await user.addRefreshToken(
-        newRefreshTokenHash,
-        deviceInfo.device,
-        deviceInfo.ip
-      );
-
-      res.cookie(
-        "refreshToken",
-        tokens.refreshToken,
-        tokenManager.getRefreshTokenCookieOptions()
-      );
-    }
+    // Rotate refresh token on every refresh.
+    const tokens = tokenManager.generateTokenPair(user);
+    const newRefreshTokenHash = tokenManager.hashRefreshToken(tokens.refreshToken);
+    const deviceInfo = tokenManager.getDeviceFingerprint(req);
+    await user.removeRefreshToken(refreshTokenHash);
+    await user.addRefreshToken(
+      newRefreshTokenHash,
+      deviceInfo.device,
+      deviceInfo.ip
+    );
+    res.cookie(
+      "refreshToken",
+      tokens.refreshToken,
+      tokenManager.getRefreshTokenCookieOptions()
+    );
 
     res.json({
       success: true,
@@ -403,8 +397,16 @@ const changePassword = async (req, res) => {
       });
     }
 
+    if (await user.comparePassword(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be different from the current password",
+      });
+    }
+
     user.password = newPassword;
     await user.save();
+    await user.removeAllRefreshTokens();
 
     logger.info("Password changed successfully:", {
       userId: user._id,

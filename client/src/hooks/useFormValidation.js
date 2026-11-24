@@ -72,8 +72,7 @@ export const useFormValidation = (initialValues, validationRules) => {
         try {
           return rules.validate(value, currentValues);
         } catch (e) {
-          // Return null if validation fails due to initialization issues
-          return null;
+          return "Validation could not be completed";
         }
       }
 

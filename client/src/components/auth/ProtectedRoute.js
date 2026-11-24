@@ -1,5 +1,5 @@
 import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { LoadingSpinner } from "../ui";
 
@@ -28,7 +28,7 @@ const ProtectedRoute = ({
   // Check specific permission if required
   if (requiredPermission && !hasPermission(requiredPermission)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-bg">
         <div className="text-center">
           <div className="max-w-md mx-auto">
             <div className="surface-card-elevated p-8">
@@ -52,12 +52,12 @@ const ProtectedRoute = ({
                 >
                   Go Back
                 </button>
-                <Navigate
+                <Link
                   to="/dashboard"
-                  className="block w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-center"
+                  className="block w-full px-4 py-2 bg-accent text-bg rounded-md transition-colors text-center hover:bg-accent-hover"
                 >
                   Go to Dashboard
-                </Navigate>
+                </Link>
               </div>
             </div>
           </div>

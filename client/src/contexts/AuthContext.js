@@ -108,12 +108,12 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, rememberMe = false) => {
     try {
       dispatch({ type: "AUTH_START" });
-      const response = await api.post("/auth/login", { email, password });
+      const response = await api.post("/auth/login", { email, password, rememberMe });
 
-      const { user, token } = response.data;
+      const { user, accessToken: token } = response.data;
       
       if (token) {
         localStorage.setItem("token", token);
@@ -141,7 +141,7 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: "AUTH_START" });
       const response = await api.post("/auth/register", userData);
 
-      const { user, token } = response.data;
+      const { user, accessToken: token } = response.data;
       
       if (token) {
         localStorage.setItem("token", token);

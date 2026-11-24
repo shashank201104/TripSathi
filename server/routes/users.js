@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -80,18 +81,23 @@ router.get('/saved-destinations', protect, async (req, res) => {
 router.post('/saved-destinations', protect, async (req, res) => {
   try {
     const { name, lat, lng } = req.body;
-
-    if (!name || !lat || !lng) {
+    const parsedLat = typeof lat === "number" ? lat : (typeof lat === "string" && lat.trim() !== "" ? Number(lat) : null);
+    const parsedLng = typeof lng === "number" ? lng : (typeof lng === "string" && lng.trim() !== "" ? Number(lng) : null);
+    if (typeof name !== "string" || name.trim().length < 2 || name.trim().length > 80 ||
+        parsedLat === null || !Number.isFinite(parsedLat) || parsedLat < -90 || parsedLat > 90 ||
+        parsedLng === null || !Number.isFinite(parsedLng) || parsedLng < -180 || parsedLng > 180 ||
+        (typeof lat === "string" && !/^[+-]?((\d+(\.\d*)?)|(\.\d+))$/.test(lat.trim())) ||
+        (typeof lng === "string" && !/^[+-]?((\d+(\.\d*)?)|(\.\d+))$/.test(lng.trim()))) {
       return res.status(400).json({
         success: false,
-        message: 'Name, latitude, and longitude are required'
+        message: 'Name and valid latitude/longitude values are required'
       });
     }
 
     const user = await User.findById(req.user.id);
     user.savedDestinations.push({
-      name,
-      coordinates: { lat: parseFloat(lat), lng: parseFloat(lng) }
+      name: name.trim(),
+      coordinates: { lat: parsedLat, lng: parsedLng }
     });
     await user.save();
 
@@ -141,22 +147,35 @@ router.delete('/saved-destinations/:id', protect, async (req, res) => {
 router.get('/', protect, authorize('admin'), async (req, res) => {
   try {
     const { page = 1, limit = 10, search } = req.query;
+    if (!/^\d+$/.test(String(page)) || !/^\d+$/.test(String(limit))) {
+      return res.status(400).json({ success: false, message: 'Invalid pagination parameters' });
+    }
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    if (pageNumber < 1 || limitNumber < 1 || limitNumber > 50) {
+      return res.status(400).json({ success: false, message: 'Invalid pagination parameters' });
+    }
+    if (search !== undefined &&
+        (typeof search !== 'string' || search.length > 100)) {
+      return res.status(400).json({ success: false, message: 'Invalid search term' });
+    }
     
     const filter = {};
     if (search) {
+      const escapedSearch = String(search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { email: { $regex: escapedSearch, $options: 'i' } }
       ];
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (pageNumber - 1) * limitNumber;
 
     const users = await User.find(filter)
       .select('-password')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(limitNumber);
 
     const total = await User.countDocuments(filter);
 
@@ -215,9 +234,27 @@ router.get('/:id', protect, authorize('admin'), async (req, res) => {
 // @access  Private/Admin
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+    const allowedFields = ['name', 'phone', 'dateOfBirth', 'role', 'isActive', 'preferences'];
+    const updates = {};
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) updates[field] = req.body[field];
+    });
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid fields provided' });
+    }
+    if (updates.role && !['user', 'admin', 'superadmin'].includes(updates.role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role' });
+    }
+    if (updates.isActive !== undefined && typeof updates.isActive !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'isActive must be a boolean' });
+    }
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updates,
       { new: true, runValidators: true }
     ).select('-password');
 

@@ -357,7 +357,7 @@ const TripDetail = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="p-2 md:p-4 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-700/50">
+            <div className="p-2 md:p-4 bg-surface border-t border-border">
               <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-3">
                 <motion.div
                   whileHover={{ scale: 1.02 }}
@@ -630,7 +630,7 @@ const TripDetail = () => {
                 </Card>
 
                 {trip.rating && (
-                  <Card className="p-4 md:p-6 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 backdrop-blur-sm border-0 shadow-lg rounded-xl md:rounded-2xl">
+                  <Card className="p-4 md:p-6 bg-surface-elevated border border-border shadow-soft rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-base md:text-lg font-bold text-text-primary">
                         Your Rating
@@ -781,7 +781,7 @@ const TripDetail = () => {
                           {trip.preferences.transport.map((mode, idx) => (
                             <span
                               key={idx}
-                              className="px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-full text-sm font-medium text-gray-800 dark:text-gray-200 capitalize"
+                              className="px-3 py-1 bg-accent-muted text-accent rounded-full text-sm font-medium capitalize"
                             >
                               {mode}
                             </span>
@@ -799,7 +799,7 @@ const TripDetail = () => {
                           {trip.preferences.interests.map((interest, idx) => (
                             <span
                               key={idx}
-                              className="px-3 py-1 bg-gradient-to-r from-pink-100 to-purple-100 dark:from-pink-900/30 dark:to-purple-900/30 rounded-full text-sm font-medium text-gray-800 dark:text-gray-200 capitalize"
+                              className="px-3 py-1 bg-surface-elevated text-text-primary rounded-full text-sm font-medium capitalize"
                             >
                               {interest}
                             </span>
@@ -873,7 +873,7 @@ const TripDetail = () => {
                               {trip.preferences.interests.map((interest, idx) => (
                                 <span
                                   key={idx}
-                                  className="px-2.5 py-1 bg-gradient-to-r from-pink-100 to-purple-100 dark:from-pink-900/30 dark:to-purple-900/30 rounded-full text-[10px] font-semibold text-gray-800 dark:text-gray-200 capitalize"
+                                  className="px-2.5 py-1 bg-surface-elevated text-text-primary rounded-full text-[10px] font-semibold capitalize"
                                 >
                                   {interest}
                                 </span>

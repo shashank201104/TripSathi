@@ -169,7 +169,11 @@ class FreeMapService {
     try {
       const [lat, lng] = location.split(",").map(parseFloat);
       const filter = type ? this.buildOverpassFilter(type) : "[amenity]";
-      const keywordFilter = keyword ? `['name'~'${keyword}',i]` : "";
+      const escapeOverpassRegex = (value) =>
+        String(value).replace(/[\\[\]{}()*+?.^$|]/g, "\\$&").replace(/'/g, "\\'");
+      const keywordFilter = keyword
+        ? `['name'~'${escapeOverpassRegex(keyword)}',i]`
+        : "";
       // Overpass QL query
       const query = `[out:json][timeout:25];(node(around:${radius},${lat},${lng})${filter}${keywordFilter};way(around:${radius},${lat},${lng})${filter}${keywordFilter};);out center 40;`;
 

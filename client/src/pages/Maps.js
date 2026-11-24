@@ -230,7 +230,7 @@ const Maps = () => {
   return (
     <div
       className="flex flex-col bg-bg"
-      style={{ height: "calc(100vh - 64px)" }}
+      style={{ height: "calc(100vh - 3.5rem)" }}
     >
       {/* Main Content */}
       <div className="flex-1 relative overflow-hidden">
@@ -255,10 +255,10 @@ const Maps = () => {
                     onClick={() => setActiveTab(tab.id)}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
-                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 md:px-6 md:py-3 text-sm font-bold rounded-2xl transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 md:px-6 md:py-3 text-sm font-medium rounded-md transition-colors ${
                       activeTab === tab.id
-                        ? "bg-accent text-bg shadow-lg shadow-blue-500/30"
-                        : "text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700/70 shadow-sm"
+                        ? "bg-accent text-bg"
+                        : "text-text-secondary bg-surface-elevated hover:text-text-primary"
                     }`}
                   >
                     <tab.icon className="h-5 w-5" />
@@ -271,14 +271,14 @@ const Maps = () => {
               {activeTab === "nearby" && (
                 <div className="p-3 space-y-3 md:p-6 md:space-y-6">
                   <div>
-                    <label className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                    <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-3">
                       <FaMapPin className="h-4 w-4 text-accent" />
                       Place Type
                     </label>
                     <select
                       value={placeType}
                       onChange={(e) => setPlaceType(e.target.value)}
-                      className="w-full px-3 py-2 md:px-4 md:py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm text-text-primary font-semibold transition-all cursor-pointer"
+                      className="w-full px-3 py-2 md:px-4 md:py-3 border border-border bg-surface rounded-md focus:ring-2 focus:ring-accent/20 focus:border-accent text-text-primary transition-theme cursor-pointer"
                     >
                       <option value="tourist_attraction">
                         Tourist Attractions
@@ -296,10 +296,10 @@ const Maps = () => {
 
                   {/* Enhanced Radius and Sorting Controls */}
                   <div className="grid grid-cols-1 gap-6">
-                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-700 p-3 md:p-4 rounded-2xl">
-                      <label className="flex items-center justify-between text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 md:mb-3">
+                    <div className="bg-surface-elevated p-3 md:p-4 rounded-lg">
+                      <label className="flex items-center justify-between text-sm font-medium text-text-primary mb-2 md:mb-3">
                         <span>Search Radius</span>
-                        <span className="px-3 py-1 bg-accent text-white rounded-full text-xs font-bold">
+                        <span className="px-3 py-1 bg-accent text-white rounded-full text-xs font-medium">
                           {radiusKm} km
                         </span>
                       </label>
@@ -320,13 +320,13 @@ const Maps = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                      <label className="block text-sm font-medium text-text-primary mb-3">
                         Sort By
                       </label>
                       <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="w-full px-3 py-2 md:px-4 md:py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm text-text-primary font-semibold transition-all cursor-pointer"
+                        className="w-full px-3 py-2 md:px-4 md:py-3 border border-border bg-surface rounded-md focus:ring-2 focus:ring-accent/20 focus:border-accent text-text-primary transition-theme cursor-pointer"
                       >
                         <option value="distance">Distance</option>
                         <option value="name">Name</option>
@@ -337,7 +337,7 @@ const Maps = () => {
                       whileTap={{ scale: 0.98 }}
                       onClick={fetchNearbyPlaces}
                       disabled={loading}
-                      className="w-full bg-accent text-bg hover:brightness-110 font-bold px-6 py-4 rounded-2xl shadow-lg hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full bg-accent text-bg hover:bg-accent-hover font-semibold px-6 py-3 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       <FaMapMarkedAlt className="h-5 w-5" />
                       {loading ? "Loading..." : "Refresh Nearby"}
@@ -345,7 +345,7 @@ const Maps = () => {
                   </div>
 
                   {error && (
-                    <div className="mb-4 p-3 bg-red-50 text-red-700 rounded border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800">
+                    <div className="mb-4 p-3 bg-error-muted text-error rounded-md border border-error/30">
                       {error}
                     </div>
                   )}
@@ -364,11 +364,11 @@ const Maps = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.05, type: "spring" }}
                         whileHover={{
-                          scale: 1.03,
-                          y: -4,
-                          boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+                          scale: 1.01,
+                          y: -1,
+                          boxShadow: "0 6px 20px rgba(34,34,31,0.08)",
                         }}
-                        className="bg-white dark:bg-gray-700 rounded-2xl p-3 md:p-5 border-2 border-gray-100 dark:border-gray-600 shadow-md hover:shadow-2xl transition-all group"
+                        className="bg-surface rounded-lg p-3 md:p-5 border border-border shadow-soft hover:shadow-medium transition-all group"
                         onClick={() => {
                           setSelectedPlace(place);
                           setCenter({
@@ -378,8 +378,8 @@ const Maps = () => {
                         }}
                       >
                         <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 w-12 h-12 bg-accent rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                            <FaMapPin className="h-6 w-6 text-white" />
+                          <div className="flex-shrink-0 w-12 h-12 bg-accent-muted text-accent rounded-lg flex items-center justify-center group-hover:scale-[1.03] transition-transform">
+                            <FaMapPin className="h-6 w-6 text-accent" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-bold text-text-primary text-base mb-1 line-clamp-2 group-hover:text-accent dark:group-hover:text-blue-400 transition-colors">
@@ -416,7 +416,7 @@ const Maps = () => {
                               place.name
                             );
                           }}
-                          className="mt-3 w-full text-sm bg-accent text-bg px-4 py-2.5 rounded-xl hover:shadow-lg flex items-center justify-center gap-2 font-bold transition-all"
+                          className="mt-3 w-full text-sm bg-accent text-bg px-4 py-2.5 rounded-md flex items-center justify-center gap-2 font-semibold transition-colors"
                         >
                           <FaBookmark className="h-4 w-4" />
                           Save Location
@@ -444,7 +444,7 @@ const Maps = () => {
                     </div>
                   </div>
                   {savedLocations.length === 0 ? (
-                    <div className="text-center py-6 md:py-12 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600">
+                    <div className="text-center py-6 md:py-12 bg-surface-elevated rounded-lg border border-border">
                       <FaHeart className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 text-gray-300 dark:text-gray-600" />
                       <p className="text-gray-500 dark:text-gray-400 font-semibold">
                         No saved locations yet
@@ -461,7 +461,7 @@ const Maps = () => {
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
                           whileHover={{ scale: 1.02 }}
-                          className="bg-white dark:bg-gray-700 rounded-2xl p-3 md:p-5 border-2 border-gray-100 dark:border-gray-600 shadow-md hover:shadow-2xl transition-all group"
+                          className="bg-surface rounded-lg p-3 md:p-5 border border-border shadow-soft hover:shadow-medium transition-all group"
                         >
                           <div className="flex justify-between items-start gap-3">
                             <div
@@ -514,7 +514,7 @@ const Maps = () => {
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className={`absolute ${
             sidebarOpen ? "left-0 md:left-96" : "left-0"
-          } top-1/2 transform -translate-y-1/2 z-40 bg-black/40 backdrop-blur-md border-r border-y border-white/20 md:border-0 md:bg-gradient-to-r md:from-blue-600 md:to-purple-600 text-white px-2 py-4 md:py-6 rounded-r-2xl shadow-2xl hover:shadow-blue-500/50 font-bold transition-all duration-300`}
+          } top-1/2 transform -translate-y-1/2 z-40 bg-accent text-bg px-2 py-4 md:py-6 rounded-r-lg shadow-medium font-medium transition-colors duration-200`}
         >
           {sidebarOpen ? "◀" : "▶"}
         </motion.button>
@@ -527,7 +527,7 @@ const Maps = () => {
               initial={{ y: -50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.4 }}
-              className="md:bg-white/95 md:dark:bg-gray-800/95 md:backdrop-blur-xl md:rounded-2xl md:shadow-2xl md:border md:border-gray-200/50 md:dark:border-gray-700/50 md:p-4"
+              className="md:bg-surface md:rounded-lg md:shadow-medium md:border md:border-border md:p-4"
             >
               {/* Search Bar with Integrated Button */}
               <form onSubmit={handleSearch} className="relative shadow-lg md:shadow-none rounded-xl">
@@ -536,12 +536,12 @@ const Maps = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for places..."
-                  className="w-full h-11 pl-4 pr-12 bg-white md:bg-gray-50 dark:bg-gray-800 md:dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm text-text-primary placeholder-gray-400 transition-all text-sm"
+                  className="w-full h-11 pl-4 pr-12 bg-surface border border-border rounded-md focus:ring-2 focus:ring-accent focus:border-accent text-text-primary placeholder-text-secondary transition-theme text-sm"
                 />
                 <button
                   type="submit"
                   disabled={loading || !searchQuery.trim()}
-                  className="absolute right-1 top-1 bottom-1 w-9 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center p-0"
+                  className="absolute right-1 top-1 bottom-1 w-9 bg-accent hover:bg-accent-hover text-bg rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center p-0"
                 >
                   <FaSearch className="h-3.5 w-3.5" />
                 </button>
@@ -552,7 +552,7 @@ const Maps = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => currentLocation && setCenter(currentLocation)}
-                className="hidden md:flex w-full h-11 mt-3 bg-gradient-to-br from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl hover:shadow-lg transition-all shadow-md items-center justify-center gap-2 font-semibold text-sm"
+                className="hidden md:flex w-full h-11 mt-3 bg-accent hover:bg-accent-hover text-bg rounded-md transition-colors items-center justify-center gap-2 font-semibold text-sm"
                 title="My Location"
               >
                 <FaLocationArrow className="h-4 w-4" />
@@ -565,10 +565,10 @@ const Maps = () => {
           <motion.button
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            whileHover={{ scale: 1.1 }}
+            whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => currentLocation && setCenter(currentLocation)}
-            className="absolute bottom-24 right-4 z-[1000] md:hidden w-12 h-12 bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center pointer-events-auto"
+            className="absolute bottom-24 right-4 z-[1000] md:hidden w-12 h-12 bg-accent text-bg rounded-full shadow-medium hover:shadow-medium flex items-center justify-center pointer-events-auto"
             title="My Location"
           >
             <FaLocationArrow className="h-5 w-5" />

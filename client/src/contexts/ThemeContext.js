@@ -6,8 +6,8 @@ const STORAGE_KEY = "tripsathi-theme";
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setThemeState] = useState(() => {
-    if (typeof window === "undefined") return "dark";
-    return localStorage.getItem(STORAGE_KEY) || "dark";
+    if (typeof window === "undefined") return "light";
+    return localStorage.getItem(STORAGE_KEY) || "light";
   });
 
   useEffect(() => {

@@ -262,10 +262,6 @@ Make sure to include realistic costs, actual attractions, restaurants, and locat
     res.status(500).json({
       success: false,
       message: "Error generating itinerary with AI",
-      error:
-        process.env.NODE_ENV === "development"
-          ? error.message
-          : "Internal server error",
     });
   }
 };

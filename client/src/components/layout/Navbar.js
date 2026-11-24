@@ -14,7 +14,7 @@ import {
   FaChartBar,
 } from "react-icons/fa";
 
-const Navbar = () => {
+const AppNavbar = () => {
   const { user, isAuthenticated, logout, getRemainingAiRequests } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -40,19 +40,19 @@ const Navbar = () => {
   const isActive = (href) => location.pathname === href;
 
   return (
-    <nav className="glass-panel border-b border-border h-14">
+    <nav className="app-navbar border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent-muted border border-accent/20 group-hover:border-accent/40 transition-colors">
-              <FaRoute className="h-4 w-4 text-accent" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-accent text-bg transition-colors">
+              <FaRoute className="h-4 w-4" />
             </div>
             <div className="flex flex-col">
-              <span className="text-base font-display font-bold text-text-primary leading-none">
+              <span className="text-xl font-display font-normal text-text-primary leading-none">
                 TripSathi
               </span>
-              <span className="text-[10px] font-mono text-text-secondary tracking-wider uppercase">
-                Travel OS
+              <span className="text-[10px] text-text-secondary tracking-wider uppercase">
+              Thoughtful travel
               </span>
             </div>
           </Link>
@@ -151,15 +151,11 @@ const Navbar = () => {
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <Link to="/login">
-                  <button className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary rounded-md hover:bg-accent-muted transition-colors">
+                <Link to="/login" className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary rounded-md hover:bg-accent-muted transition-colors">
                     Login
-                  </button>
                 </Link>
-                <Link to="/register">
-                  <button className="px-4 py-2 text-sm font-semibold bg-accent text-bg rounded-md hover:brightness-110 transition-all shadow-glow">
+                  <Link to="/register" className="px-4 py-2 text-sm font-semibold bg-accent text-bg rounded-md hover:bg-accent-hover transition-colors">
                     Sign Up
-                  </button>
                 </Link>
               </div>
             )}
@@ -243,5 +239,84 @@ const Navbar = () => {
     </nav>
   );
 };
+
+const LandingNavbar = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const closeMenu = () => setIsOpen(false);
+
+  return (
+    <nav className="landing-nav" aria-label="Main navigation">
+      <div className="landing-nav__inner">
+        <Link to="/" className="landing-nav__brand" onClick={closeMenu}>
+          <span className="landing-nav__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="m3.5 18 7-12 4.2 7.1 2.2-3.4 3.6 8.3h-17Z" />
+            </svg>
+          </span>
+          <span>TripSathi</span>
+        </Link>
+
+        <div className="landing-nav__links">
+          <a href="#destinations" onClick={closeMenu}>Destinations</a>
+          <a href="#journeys" onClick={closeMenu}>Journeys</a>
+          <Link to="/about" onClick={closeMenu}>Why TripSathi</Link>
+        </div>
+
+        <div className="landing-nav__actions">
+          <a href="#planner" className="landing-nav__plan">
+            Plan a journey
+          </a>
+          <Link
+            to="/login"
+            className="landing-nav__auth-link"
+            onClick={closeMenu}
+          >
+            Sign in
+          </Link>
+          <Link
+            to="/register"
+            className="landing-nav__auth-button"
+            onClick={closeMenu}
+          >
+            Sign up
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          className="landing-nav__toggle"
+          aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((open) => !open)}
+        >
+          {isOpen ? <FaTimes /> : <FaBars />}
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="landing-nav__mobile">
+          <a href="#destinations" onClick={closeMenu}>Destinations</a>
+          <a href="#journeys" onClick={closeMenu}>Journeys</a>
+          <Link to="/about" onClick={closeMenu}>Why TripSathi</Link>
+          <a href="#planner" className="landing-nav__mobile-plan" onClick={closeMenu}>
+            Plan a journey
+          </a>
+          <div className="landing-nav__mobile-auth">
+            <Link to="/login" onClick={closeMenu}>
+              Sign in
+            </Link>
+            <Link to="/register" onClick={closeMenu}>
+              Sign up
+            </Link>
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+};
+
+const Navbar = ({ variant }) =>
+  variant === "landing" ? <LandingNavbar /> : <AppNavbar />;
 
 export default Navbar;

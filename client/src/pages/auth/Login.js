@@ -22,7 +22,7 @@ const Login = () => {
       }
     );
 
-  const from = location.state?.from?.pathname || "/dashboard";
+  const from = location.state?.from;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,9 +30,18 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const result = await login(values.email, values.password);
+      const result = await login(values.email, values.password, values.rememberMe);
       if (result.success) {
-        navigate(from, { replace: true });
+        navigate(
+          from?.pathname
+            ? {
+                pathname: from.pathname,
+                search: from.search,
+                hash: from.hash,
+              }
+            : "/dashboard",
+          { replace: true, state: from?.state }
+        );
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -42,20 +51,19 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg flex">
-      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-12 border-r border-border">
-        <div className="absolute inset-0 bg-grid-pattern bg-grid opacity-30" />
+    <div className="auth-layout min-h-screen bg-bg flex">
+      <div className="auth-brand-panel hidden lg:flex lg:w-1/2 relative items-center justify-center p-12 border-r border-border">
         <div className="relative max-w-md">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-lg bg-accent-muted border border-accent/20 flex items-center justify-center">
-              <FaRoute className="h-5 w-5 text-accent" />
+              <FaRoute className="h-5 w-5 text-bg" />
             </div>
             <div>
-              <h2 className="text-2xl font-display font-bold text-text-primary">TripSathi</h2>
-              <p className="text-xs font-mono text-text-secondary uppercase tracking-wider">Travel OS</p>
+              <h2 className="text-3xl font-display font-normal text-text-primary">TripSathi</h2>
+              <p className="text-xs text-text-secondary uppercase tracking-wider">Thoughtful travel</p>
             </div>
           </div>
-          <h3 className="text-3xl font-display font-bold text-text-primary mb-4">
+          <h3 className="text-5xl font-display font-normal text-text-primary mb-4">
             Welcome back
           </h3>
           <p className="text-text-secondary leading-relaxed">
@@ -70,11 +78,11 @@ const Login = () => {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md"
         >
-          <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-accent-muted border border-accent/20 mb-3">
-              <FaRoute className="h-5 w-5 text-accent" />
+          <div className="auth-mobile-brand lg:hidden text-center mb-8">
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-accent text-bg mb-3">
+              <FaRoute className="h-5 w-5 text-bg" />
             </div>
-            <h2 className="text-xl font-display font-bold text-text-primary">Welcome back</h2>
+            <h2 className="text-3xl font-display font-normal text-text-primary">Welcome back</h2>
           </div>
 
           <Card elevated className="p-6 md:p-8">
@@ -142,7 +150,11 @@ const Login = () => {
 
               <p className="text-center text-sm text-text-secondary">
                 Don&apos;t have an account?{" "}
-                <Link to="/register" className="font-semibold text-accent hover:underline">
+                <Link
+                  to="/register"
+                  state={location.state}
+                  className="font-semibold text-accent hover:underline"
+                >
                   Sign up
                 </Link>
               </p>

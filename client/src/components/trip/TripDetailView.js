@@ -324,8 +324,9 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
 
       if (response.data.success || response.data.trip) {
         toast.success("Trip added successfully!", { id: "add-trip" });
-        // Invalidate trips cache to refresh the trips list
+        // Refresh both trip lists and the dashboard analytics.
         queryClient.invalidateQueries({ queryKey: ["trips"] });
+        queryClient.invalidateQueries({ queryKey: ["userTrips"] });
         onClose();
         setTimeout(() => {
           navigate("/trips");
@@ -562,7 +563,7 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto"
+      className="fixed inset-0 bg-black/60 z-50 overflow-y-auto"
       onClick={onClose}
     >
       <div
@@ -682,7 +683,7 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
 
             {/* Recommendations */}
             {itinerary.recommendations && (
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 p-3 md:p-6 rounded-xl mb-4 md:mb-8">
+              <div className="bg-surface-elevated border border-border p-3 md:p-6 rounded-lg mb-4 md:mb-8">
                 <h3 className="text-xl font-bold text-text-primary mb-4 flex items-center gap-2">
                   <FaInfoCircle className="text-yellow-600" />
                   Important Travel Information
@@ -938,7 +939,7 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
                 whileTap={{ scale: 0.98 }}
                 onClick={handleDownloadPDF}
                 disabled={isDownloading}
-                className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold py-2 px-3 md:py-4 md:px-6 rounded-xl transition-all flex items-center justify-center gap-1 md:gap-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-base"
+                className="bg-surface text-text-primary border border-border hover:border-accent font-semibold py-2 px-3 md:py-4 md:px-6 rounded-md transition-colors flex items-center justify-center gap-1 md:gap-3 disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-base"
               >
                 <FaDownload className={isDownloading ? "animate-bounce" : ""} />
                 <span className="md:inline">{isDownloading ? "Generating..." : "Download PDF"}</span>
@@ -950,7 +951,7 @@ const TripDetailView = ({ itinerary, formValues, onClose }) => {
                 whileTap={{ scale: 0.98 }}
                 onClick={handleAddTrip}
                 disabled={isAddingTrip}
-                className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white font-semibold py-2 px-3 md:py-4 md:px-6 rounded-xl transition-all flex items-center justify-center gap-1 md:gap-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-base"
+                className="bg-accent hover:bg-accent text-bg border border-transparent font-semibold py-2 px-3 md:py-4 md:px-6 rounded-md transition-colors flex items-center justify-center gap-1 md:gap-3 disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-base"
               >
                 <FaPlus className={isAddingTrip ? "animate-spin" : ""} />
                 {isAddingTrip ? "Adding..." : "Add Trip"}

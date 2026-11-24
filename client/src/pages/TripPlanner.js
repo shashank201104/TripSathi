@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
 import { useApiMutation, useApi } from "../hooks/useApi";
@@ -8,7 +9,7 @@ import { Button, Input, Card } from "../components/ui";
 import { aiAPI, tripAPI } from "../services/api";
 import TripResultCard from "../components/trip/TripResultCard";
 import TripDetailView from "../components/trip/TripDetailView";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import {
   FaMapMarkedAlt,
   FaCalendarAlt,
@@ -33,9 +34,12 @@ import {
 
 const TripPlanner = () => {
   const { getRemainingAiRequests } = useAuth();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const editTripId = searchParams.get("edit");
+  const plannerIntent = location.state?.plannerIntent;
 
   const [currentStep, setCurrentStep] = useState(1);
   const [generatedItinerary, setGeneratedItinerary] = useState(null);
@@ -46,10 +50,10 @@ const TripPlanner = () => {
   const { values, errors, handleChange, handleBlur, isValid, setValues } =
     useFormValidation(
       {
-        destination: "",
-        startDate: "",
+        destination: plannerIntent?.destination || "",
+        startDate: plannerIntent?.startDate || "",
         endDate: "",
-        travelers: 2,
+        travelers: plannerIntent?.travelers ?? 2,
         budget: "",
         interests: [],
         travelStyle: "",
@@ -286,6 +290,8 @@ const TripPlanner = () => {
       const response = await tripAPI.createTrip(tripData);
 
       if (response.data.success) {
+        await queryClient.invalidateQueries({ queryKey: ["trips"] });
+        await queryClient.invalidateQueries({ queryKey: ["userTrips"] });
         toast.success(
           "Trip draft saved successfully! You can view it in My Trips."
         );
@@ -340,7 +346,7 @@ const TripPlanner = () => {
               transition={{ type: "spring", stiffness: 200 }}
               className="flex justify-center mb-2 md:mb-3"
             >
-              <div className="p-3 md:p-4 bg-white/20 backdrop-blur-sm rounded-xl md:rounded-2xl">
+              <div className="p-3 md:p-4 bg-accent-muted text-accent rounded-lg">
                 <FaMagic className="h-6 w-6 md:h-10 md:w-10" />
               </div>
             </motion.div>
@@ -349,7 +355,7 @@ const TripPlanner = () => {
               Let our AI create the perfect itinerary for your next adventure
             </p>
             {remainingRequests !== -1 && (
-              <div className="mt-2 md:mt-3 inline-flex items-center px-3 md:px-4 py-1.5 md:py-2 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl text-xs md:text-sm font-semibold">
+              <div className="mt-2 md:mt-3 inline-flex items-center px-3 md:px-4 py-1.5 md:py-2 bg-accent-muted text-accent rounded-md text-xs md:text-sm font-semibold">
                 <FaRocket className="mr-2" />
                 {remainingRequests} AI requests remaining
               </div>
@@ -370,7 +376,7 @@ const TripPlanner = () => {
               <div className="flex items-end justify-between mb-3">
                 <div>
                   <div className="flex items-center space-x-2 mb-1">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-accent dark:bg-blue-900/30 dark:text-blue-400">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent-muted text-[10px] font-bold text-accent">
                       {currentStep}
                     </span>
                     <span className="text-xs font-semibold text-accent uppercase tracking-wider">
@@ -409,7 +415,7 @@ const TripPlanner = () => {
                         className={`flex flex-col items-center justify-center px-3 py-3 rounded-2xl border-2 transition-all duration-300 text-center col-span-1 min-h-[80px] ${
                           isActive || isCompleted
                             ? "border-transparent bg-accent text-bg shadow-glow"
-                            : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-400"
+                            : "border-border bg-surface text-text-secondary"
                         }`}
                       >
                         <div className="flex items-center justify-center mb-1">
@@ -436,7 +442,7 @@ const TripPlanner = () => {
                           className={`h-1 mx-2 rounded-full transition-all duration-300 col-span-1 ${
                             isCompleted
                               ? "bg-accent"
-                              : "bg-gray-300 dark:bg-gray-600"
+                              : "bg-border"
                           }`}
                         />
                       )}
@@ -518,7 +524,7 @@ const TripPlanner = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-primary mb-2">
                   Budget per person (INR)
                 </label>
                 <select
@@ -526,7 +532,7 @@ const TripPlanner = () => {
                   value={values.budget}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className="input"
                   required
                 >
                   <option value="">Select your budget</option>
@@ -537,7 +543,7 @@ const TripPlanner = () => {
                   <option value="luxury">₹240,000+ (Luxury)</option>
                 </select>
                 {errors.budget && (
-                  <p className="mt-1 text-sm text-red-600">{errors.budget}</p>
+                  <p className="mt-1 text-sm text-error">{errors.budget}</p>
                 )}
               </div>
             </motion.div>
@@ -566,14 +572,14 @@ const TripPlanner = () => {
                       className={`p-3 md:p-4 rounded-xl border-2 transition-all duration-300 text-center min-h-[44px] ${
                         values.interests?.includes(interest.id)
                           ? "border-transparent bg-accent text-bg shadow-glow"
-                          : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md"
+                          : "border-border bg-surface hover:border-accent"
                       }`}
                     >
                       <interest.icon
                         className={`h-5 w-5 md:h-7 md:w-7 mx-auto mb-1 md:mb-2 ${
                           values.interests?.includes(interest.id)
                             ? "text-white"
-                            : "text-gray-400"
+                            : "text-text-secondary"
                         }`}
                       />
                       <span className="text-[10px] md:text-xs font-semibold">
@@ -605,7 +611,7 @@ const TripPlanner = () => {
                       className={`p-2 md:p-5 rounded-xl border-2 transition-all duration-300 text-left min-h-[44px] ${
                         values.travelStyle === style.id
                           ? "border-transparent bg-accent text-bg shadow-glow"
-                          : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md"
+                          : "border-border bg-surface hover:border-accent"
                       }`}
                     >
                       <h4
@@ -620,8 +626,8 @@ const TripPlanner = () => {
                       <p
                         className={`text-xs md:text-sm ${
                           values.travelStyle === style.id
-                            ? "text-blue-100"
-                            : "text-gray-500 dark:text-gray-400"
+                            ? "text-bg"
+                            : "text-text-secondary"
                         }`}
                       >
                         {style.description}
@@ -634,14 +640,14 @@ const TripPlanner = () => {
               {/* Accommodation & Transportation */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-primary mb-2">
                     Accommodation Type
                   </label>
                   <select
                     name="accommodationType"
                     value={values.accommodationType}
                     onChange={handleChange}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-h-[44px]"
+                    className="input"
                   >
                     <option value="">Any preference</option>
                     {accommodationTypes.map((type) => (
@@ -653,14 +659,14 @@ const TripPlanner = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-primary mb-2">
                     Transportation
                   </label>
                   <select
                     name="transportation"
                     value={values.transportation}
                     onChange={handleChange}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white min-h-[44px]"
+                    className="input"
                   >
                     <option value="">Any preference</option>
                     {transportationOptions.map((transport) => (
@@ -674,7 +680,7 @@ const TripPlanner = () => {
 
               {/* Special Requests */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-primary mb-2">
                   Special Requests (Optional)
                 </label>
                 <textarea
@@ -683,7 +689,7 @@ const TripPlanner = () => {
                   onChange={handleChange}
                   placeholder="Any special requirements, accessibility needs, or specific preferences..."
                   rows={4}
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className="input"
                 />
               </div>
             </motion.div>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFormValidation } from "../../hooks/useFormValidation";
@@ -20,15 +20,29 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { register: registerUser } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
+  const from = location.state?.from;
 
   const { values, errors, handleChange, handleBlur, isValid } =
     useFormValidation(
       { name: "", email: "", password: "", confirmPassword: "" },
       {
-        name: { required: true, minLength: 2 },
+        name: {
+          required: true,
+          minLength: 2,
+          maxLength: 50,
+          pattern: /^[a-zA-Z\s'-]+$/,
+          message: "Name must contain only letters, spaces, hyphens, and apostrophes",
+        },
         email: { required: true, email: true },
-        password: { required: true, minLength: 8 },
+        password: {
+          required: true,
+          minLength: 8,
+          maxLength: 128,
+          pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
+          message: "Password must include uppercase, lowercase, number, and special character",
+        },
         confirmPassword: {
           required: true,
           validate: (value, allValues) => {
@@ -51,7 +65,16 @@ const Register = () => {
         password: values.password,
       });
       if (result.success) {
-        navigate("/dashboard");
+        navigate(
+          from?.pathname
+            ? {
+                pathname: from.pathname,
+                search: from.search,
+                hash: from.hash,
+              }
+            : "/dashboard",
+          { replace: true, state: from?.state }
+        );
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -61,20 +84,19 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg flex">
-      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-12 border-r border-border">
-        <div className="absolute inset-0 bg-grid-pattern bg-grid opacity-30" />
+    <div className="auth-layout min-h-screen bg-bg flex">
+      <div className="auth-brand-panel hidden lg:flex lg:w-1/2 relative items-center justify-center p-12 border-r border-border">
         <div className="relative max-w-md">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-lg bg-accent-muted border border-accent/20 flex items-center justify-center">
               <FaRoute className="h-5 w-5 text-accent" />
             </div>
             <div>
-              <h2 className="text-2xl font-display font-bold text-text-primary">TripSathi</h2>
-              <p className="text-xs font-mono text-text-secondary uppercase tracking-wider">Travel OS</p>
+              <h2 className="text-3xl font-display font-normal text-text-primary">TripSathi</h2>
+              <p className="text-xs text-text-secondary uppercase tracking-wider">Thoughtful travel</p>
             </div>
           </div>
-          <h3 className="text-3xl font-display font-bold text-text-primary mb-4">
+          <h3 className="text-5xl font-display font-normal text-text-primary mb-4">
             Start your journey
           </h3>
           <p className="text-text-secondary leading-relaxed mb-8">
@@ -99,8 +121,11 @@ const Register = () => {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md"
         >
-          <div className="lg:hidden text-center mb-8">
-            <h2 className="text-xl font-display font-bold text-text-primary">Create account</h2>
+          <div className="auth-mobile-brand lg:hidden text-center mb-8">
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-accent text-bg mb-3">
+              <FaRoute className="h-5 w-5" />
+            </div>
+            <h2 className="text-3xl font-display font-normal text-text-primary">Create account</h2>
           </div>
 
           <Card elevated className="p-6 md:p-8">
@@ -188,7 +213,11 @@ const Register = () => {
 
               <p className="text-center text-sm text-text-secondary">
                 Already have an account?{" "}
-                <Link to="/login" className="font-semibold text-accent hover:underline">
+                <Link
+                  to="/login"
+                  state={location.state}
+                  className="font-semibold text-accent hover:underline"
+                >
                   Sign in
                 </Link>
               </p>

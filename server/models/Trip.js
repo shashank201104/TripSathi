@@ -46,7 +46,7 @@ const tripSchema = new mongoose.Schema(
       },
       travelStyle: {
         type: String,
-        enum: ["budget", "luxury", "adventure", "relaxation", "cultural"],
+        enum: ["budget", "luxury", "adventure", "mid-range", "relaxation", "cultural"],
         default: "budget",
       },
       groupSize: {
@@ -65,18 +65,21 @@ const tripSchema = new mongoose.Schema(
             "shopping",
             "history",
             "nightlife",
+            "beach",
+            "photography",
+            "wellness",
           ],
         },
       ],
       accommodation: {
         type: String,
-        enum: ["hotel", "hostel", "apartment", "resort"],
+        enum: ["hotel", "hostel", "apartment", "resort", "airbnb", "boutique"],
         default: "hotel",
       },
       transport: [
         {
           type: String,
-          enum: ["flight", "train", "bus", "car", "walking"],
+          enum: ["flight", "train", "bus", "car", "walking", "mixed"],
         },
       ],
     },

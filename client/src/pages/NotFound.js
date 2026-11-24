@@ -7,7 +7,6 @@ import { Button } from "../components/ui";
 const NotFound = () => {
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-4 relative">
-      <div className="absolute inset-0 bg-grid-pattern bg-grid opacity-40 pointer-events-none" />
       <div className="max-w-md w-full text-center relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

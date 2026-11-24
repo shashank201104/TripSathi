@@ -11,12 +11,15 @@ const Layout = ({
   showSidebar = false,
   fullScreen = false,
   showNavbarOnly = false,
+  showFooter = true,
 }) => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
 
   const shouldShowSidebar = showSidebar && isAuthenticated;
-  const shouldShowFooter = location.pathname === "/";
+  const shouldShowFooter =
+    showFooter && location.pathname !== "/" && location.pathname !== "/maps";
+  const isLandingPage = location.pathname === "/";
 
   if (fullScreen) {
     return (
@@ -37,27 +40,38 @@ const Layout = ({
 
   return (
     <div className="flex flex-col min-h-screen bg-bg transition-theme">
-      <div className="sticky top-0 z-50 w-full">
-        <Navbar />
+      <div className={isLandingPage ? "absolute inset-x-0 top-0 z-50 w-full" : "sticky top-0 z-50 w-full"}>
+        <Navbar variant={isLandingPage ? "landing" : undefined} />
       </div>
 
-      <div className="flex flex-1 relative">
-        {shouldShowSidebar && (
-          <aside className="hidden lg:block w-72 flex-shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto border-r border-border">
-            <Sidebar />
-          </aside>
-        )}
+      {isLandingPage ? (
+        <motion.div
+          className="flex-1 w-full min-w-0"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {children || <Outlet />}
+        </motion.div>
+      ) : (
+        <div className="flex flex-1 relative">
+          {shouldShowSidebar && (
+            <aside className="hidden lg:block w-64 flex-shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto border-r border-border">
+              <Sidebar />
+            </aside>
+          )}
 
-        <main className="flex-1 w-full min-w-0">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {children || <Outlet />}
-          </motion.div>
-        </main>
-      </div>
+          <main className="flex-1 w-full min-w-0">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {children || <Outlet />}
+            </motion.div>
+          </main>
+        </div>
+      )}
 
       {shouldShowFooter && (
         <div className="w-full z-10 border-t border-border">

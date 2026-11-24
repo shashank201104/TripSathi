@@ -31,23 +31,29 @@ root.render(
           <App />
           <Toaster
             position="top-right"
+            gutter={10}
             toastOptions={{
               duration: 4000,
-              className: "!bg-surface !text-text-primary !border !border-border !shadow-medium",
+              className: "app-toast",
               style: {
                 background: "var(--color-surface)",
                 color: "var(--color-text-primary)",
                 border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-lg)",
+                boxShadow: "var(--shadow-medium)",
+                fontFamily: "'DM Sans', system-ui, sans-serif",
+                fontSize: "14px",
+                lineHeight: 1.5,
+                padding: "12px 16px",
+                width: "min(380px, calc(100vw - 32px))",
               },
               success: {
-                duration: 3000,
                 iconTheme: {
                   primary: "var(--color-success)",
                   secondary: "var(--color-surface)",
                 },
               },
               error: {
-                duration: 5000,
                 iconTheme: {
                   primary: "var(--color-error)",
                   secondary: "var(--color-surface)",

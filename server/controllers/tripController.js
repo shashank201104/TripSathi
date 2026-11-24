@@ -1,6 +1,16 @@
 const { validationResult } = require("express-validator");
+const mongoose = require("mongoose");
 const Trip = require("../models/Trip");
 const User = require("../models/User");
+
+const escapeRegex = (value) =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const strictInteger = (value, fallback, min, max) => {
+  if (value === undefined) return fallback;
+  if (typeof value !== "string" || !/^\d+$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= min && parsed <= max ? parsed : null;
+};
 
 // @desc    Create a new trip
 // @route   POST /api/trips
@@ -72,15 +82,19 @@ const createTrip = async (req, res) => {
     });
   } catch (error) {
     console.error("Create trip error:", error);
-    console.error("Error stack:", error.stack);
-    console.error("Error name:", error.name);
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: Object.values(error.errors).map((item) => ({
+          field: item.path,
+          message: item.message,
+        })),
+      });
+    }
     res.status(500).json({
       success: false,
       message: "Error creating trip",
-      error:
-        process.env.NODE_ENV === "development"
-          ? error.message
-          : "Internal server error",
     });
   }
 };
@@ -98,6 +112,22 @@ const getTrips = async (req, res) => {
       sortBy = "createdAt",
       sortOrder = "desc",
     } = req.query;
+    const pageNumber = strictInteger(page, 1, 1, 100000);
+    const limitNumber = strictInteger(limit, 10, 1, 50);
+    if (pageNumber === null || limitNumber === null) {
+      return res.status(400).json({ success: false, message: "Invalid pagination parameters" });
+    }
+    if (status && !["draft", "upcoming", "ongoing", "completed", "cancelled"].includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid trip status" });
+    }
+    if (destination !== undefined &&
+        (typeof destination !== "string" || destination.length > 100)) {
+      return res.status(400).json({ success: false, message: "Invalid destination filter" });
+    }
+    const allowedSortFields = new Set(["createdAt", "startDate", "endDate", "title"]);
+    if (!allowedSortFields.has(sortBy) || !["asc", "desc"].includes(sortOrder)) {
+      return res.status(400).json({ success: false, message: "Invalid sorting parameters" });
+    }
 
 
     // Build query
@@ -109,13 +139,13 @@ const getTrips = async (req, res) => {
 
     if (destination) {
       query.$or = [
-        { "destination.city": { $regex: destination, $options: "i" } },
-        { "destination.country": { $regex: destination, $options: "i" } },
+        { "destination.city": { $regex: escapeRegex(destination), $options: "i" } },
+        { "destination.country": { $regex: escapeRegex(destination), $options: "i" } },
       ];
     }
 
     // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (pageNumber - 1) * limitNumber;
     const sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
 
 
@@ -124,7 +154,7 @@ const getTrips = async (req, res) => {
       .populate("user", "name email avatar")
       .sort(sort)
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(limitNumber)
       .lean();
 
 
@@ -145,7 +175,7 @@ const getTrips = async (req, res) => {
         totalTrips: total,
         hasNextPage,
         hasPrevPage,
-        limit: parseInt(limit),
+        limit: limitNumber,
       },
     });
   } catch (error) {
@@ -155,10 +185,6 @@ const getTrips = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching trips",
-      error:
-        process.env.NODE_ENV === "development"
-          ? error.message
-          : "Internal server error",
     });
   }
 };
@@ -305,22 +331,26 @@ const updateTrip = async (req, res) => {
       trip,
     });
   } catch (error) {
-    console.error("Update trip error:", error);
-
     if (error.name === "CastError") {
       return res.status(404).json({
         success: false,
         message: "Trip not found",
       });
     }
-
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: Object.values(error.errors).map((item) => ({
+          field: item.path,
+          message: item.message,
+        })),
+      });
+    }
+    console.error("Update trip error:", error);
     res.status(500).json({
       success: false,
       message: "Error updating trip",
-      error:
-        process.env.NODE_ENV === "development"
-          ? error.message
-          : "Internal server error",
     });
   }
 };
@@ -387,14 +417,24 @@ const getPublicTrips = async (req, res) => {
       sortBy = "createdAt",
       sortOrder = "desc",
     } = req.query;
+    const pageNumber = strictInteger(page, 1, 1, 100000);
+    const limitNumber = strictInteger(limit, 10, 1, 50);
+    const allowedSortFields = new Set(["createdAt", "startDate", "endDate", "title"]);
+    if (pageNumber === null || limitNumber === null ||
+        !allowedSortFields.has(sortBy) ||
+        !["asc", "desc"].includes(sortOrder) ||
+        (destination !== undefined &&
+          (typeof destination !== "string" || destination.length > 100))) {
+      return res.status(400).json({ success: false, message: "Invalid public trip query" });
+    }
 
     // Build query for public trips
     const query = { isPublic: true };
 
     if (destination) {
       query.$or = [
-        { "destination.city": { $regex: destination, $options: "i" } },
-        { "destination.country": { $regex: destination, $options: "i" } },
+        { "destination.city": { $regex: escapeRegex(destination), $options: "i" } },
+        { "destination.country": { $regex: escapeRegex(destination), $options: "i" } },
       ];
     }
 
@@ -403,7 +443,7 @@ const getPublicTrips = async (req, res) => {
     }
 
     // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (pageNumber - 1) * limitNumber;
     const sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
 
     // Get public trips
@@ -411,7 +451,7 @@ const getPublicTrips = async (req, res) => {
       .populate("user", "name avatar")
       .sort(sort)
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(limitNumber);
 
     // Get total count
     const total = await Trip.countDocuments(query);
@@ -520,7 +560,7 @@ const cloneTrip = async (req, res) => {
 // @access  Private
 const getTripStats = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = new mongoose.Types.ObjectId(req.user.id);
 
     // Get trip statistics
     const stats = await Trip.aggregate([

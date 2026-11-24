@@ -53,6 +53,25 @@ const morganLogger = morgan(morganFormat, {
 
 // Custom error logging middleware
 const errorLogger = (err, req, res, next) => {
+  const sensitiveKeys = new Set([
+    "password",
+    "currentPassword",
+    "newPassword",
+    "confirmPassword",
+    "refreshToken",
+    "accessToken",
+    "token",
+  ]);
+  const scrub = (value) => {
+    if (!value || typeof value !== "object") return value;
+    if (Array.isArray(value)) return value.map(scrub);
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) =>
+        [key, sensitiveKeys.has(key) ? "[REDACTED]" : scrub(item)]
+      )
+    );
+  };
+
   const errorInfo = {
     message: err.message,
     stack: err.stack,
@@ -61,7 +80,7 @@ const errorLogger = (err, req, res, next) => {
     ip: req.ip,
     userAgent: req.get("User-Agent"),
     timestamp: new Date().toISOString(),
-    body: req.body,
+    body: scrub(req.body),
     params: req.params,
     query: req.query,
   };

@@ -5,6 +5,7 @@ import { useNotifications } from "../contexts/NotificationContext";
 // Query keys
 const QUERY_KEYS = {
   trips: ["trips"],
+  userTrips: ["userTrips"],
   trip: (id) => ["trips", id],
   tripStats: ["trips", "stats"],
   upcomingTrips: ["trips", "upcoming"],
@@ -15,7 +16,7 @@ const QUERY_KEYS = {
 // Get all trips
 export const useTrips = (params = {}) => {
   return useQuery({
-    queryKey: [QUERY_KEYS.trips, params],
+    queryKey: [...QUERY_KEYS.trips, params],
     queryFn: async () => {
       const response = await tripAPI.getTrips(params);
       return response.data;
@@ -52,7 +53,7 @@ export const useTripStats = () => {
 // Get upcoming trips
 export const useUpcomingTrips = (params = {}) => {
   return useQuery({
-    queryKey: [QUERY_KEYS.upcomingTrips, params],
+    queryKey: [...QUERY_KEYS.upcomingTrips, params],
     queryFn: async () => {
       const response = await tripAPI.getUpcomingTrips(params);
       return response.data;
@@ -64,7 +65,7 @@ export const useUpcomingTrips = (params = {}) => {
 // Get past trips
 export const usePastTrips = (params = {}) => {
   return useQuery({
-    queryKey: [QUERY_KEYS.pastTrips, params],
+    queryKey: [...QUERY_KEYS.pastTrips, params],
     queryFn: async () => {
       const response = await tripAPI.getPastTrips(params);
       return response.data;
@@ -76,7 +77,7 @@ export const usePastTrips = (params = {}) => {
 // Get public trips
 export const usePublicTrips = (params = {}) => {
   return useQuery({
-    queryKey: [QUERY_KEYS.publicTrips, params],
+    queryKey: [...QUERY_KEYS.publicTrips, params],
     queryFn: async () => {
       const response = await tripAPI.getPublicTrips(params);
       return response.data;
@@ -100,6 +101,7 @@ export const useCreateTrip = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.trips });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tripStats });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.upcomingTrips });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userTrips });
 
       notify.trip(`New trip "${data.title}" has been created!`);
     },
@@ -125,6 +127,7 @@ export const useUpdateTrip = () => {
       queryClient.setQueryData(QUERY_KEYS.trip(data.id), data);
       // Invalidate trips list
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.trips });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userTrips });
 
       notify.success(`Trip "${data.title}" updated successfully!`);
     },
@@ -151,6 +154,7 @@ export const useDeleteTrip = () => {
       // Invalidate trips list
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.trips });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tripStats });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userTrips });
 
       notify.success("Trip deleted successfully");
     },
@@ -174,6 +178,7 @@ export const useCloneTrip = () => {
     onSuccess: (data) => {
       // Invalidate trips list to show new cloned trip
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.trips });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userTrips });
 
       notify.success(`Trip cloned successfully as "${data.title}"`);
     },

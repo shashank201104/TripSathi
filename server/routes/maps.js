@@ -6,6 +6,29 @@ const { logger } = require("../middleware/logging");
 
 const router = express.Router();
 
+const strictNumber = (value) => {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+  if (!/^[+-]?((\d+(\.\d*)?)|(\.\d+))$/.test(String(value).trim())) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const coordinateQuery = (req, res, next) => {
+  const lat = strictNumber(req.query.lat);
+  const lng = strictNumber(req.query.lng);
+  if (lat === null || lat < -90 || lat > 90 ||
+      lng === null || lng < -180 || lng > 180) {
+    return res.status(400).json({
+      success: false,
+      message: "Latitude and longitude must be valid coordinates",
+    });
+  }
+  req.query.lat = lat;
+  req.query.lng = lng;
+  next();
+};
+
 /**
  * @route   GET /api/maps/places/nearby
  * @desc    Get nearby places (hotels, restaurants, attractions) using OSM/Overpass
@@ -13,18 +36,23 @@ const router = express.Router();
 router.get("/places/nearby", async (req, res) => {
   try {
     const { lat, lng, radius = 5000, type = "tourist_attraction", keyword } = req.query;
-
-    if (!lat || !lng) {
+    const parsedLat = strictNumber(lat);
+    const parsedLng = strictNumber(lng);
+    const parsedRadius = strictNumber(radius);
+    if (parsedLat === null || parsedLat < -90 || parsedLat > 90 ||
+        parsedLng === null || parsedLng < -180 || parsedLng > 180 ||
+        parsedRadius === null || parsedRadius < 1 || parsedRadius > 50000 ||
+        (keyword !== undefined && (typeof keyword !== "string" || keyword.length > 100))) {
       return res.status(400).json({
         success: false,
-        message: "Latitude and longitude are required",
+        message: "Invalid latitude, longitude, radius, or keyword",
       });
     }
 
-    const location = `${lat},${lng}`;
+    const location = `${parsedLat},${parsedLng}`;
     const data = await freeMapService.nearbySearch(
       location,
-      parseInt(radius, 10),
+      parsedRadius,
       type,
       keyword
     );
@@ -52,18 +80,21 @@ router.get("/places/nearby", async (req, res) => {
 router.get("/places/search", async (req, res) => {
   try {
     const { query, location, radius = 50000, type } = req.query;
-
-    if (!query) {
+    const parsedRadius = strictNumber(radius);
+    if (typeof query !== "string" || query.trim().length < 2 ||
+        query.trim().length > 160 || parsedRadius === null ||
+        parsedRadius < 1 || parsedRadius > 500000 ||
+        (location !== undefined && (typeof location !== "string" || location.length > 160))) {
       return res.status(400).json({
         success: false,
-        message: "Search query is required",
+        message: "Invalid place search parameters",
       });
     }
 
     const data = await freeMapService.searchPlaces(
       query,
       location,
-      parseInt(radius, 10),
+      parsedRadius,
       type
     );
 
@@ -90,11 +121,11 @@ router.get("/places/search", async (req, res) => {
 router.get("/geocode", async (req, res) => {
   try {
     const { address } = req.query;
-
-    if (!address) {
+    if (typeof address !== "string" || address.trim().length < 2 ||
+        address.trim().length > 500) {
       return res.status(400).json({
         success: false,
-        message: "Address is required",
+        message: "Address must be between 2 and 500 characters",
       });
     }
 
@@ -117,18 +148,10 @@ router.get("/geocode", async (req, res) => {
  * @route   GET /api/maps/reverse-geocode
  * @desc    Reverse geocode coordinates to address
  */
-router.get("/reverse-geocode", async (req, res) => {
+router.get("/reverse-geocode", coordinateQuery, async (req, res) => {
   try {
     const { lat, lng } = req.query;
-
-    if (!lat || !lng) {
-      return res.status(400).json({
-        success: false,
-        message: "Latitude and longitude are required",
-      });
-    }
-
-    const result = await freeMapService.reverseGeocode(parseFloat(lat), parseFloat(lng));
+    const result = await freeMapService.reverseGeocode(Number(lat), Number(lng));
 
     res.json({
       success: true,
@@ -150,11 +173,14 @@ router.get("/reverse-geocode", async (req, res) => {
 router.get("/directions", async (req, res) => {
   try {
     const { origin, destination, mode = "driving" } = req.query;
-
-    if (!origin || !destination) {
+    const allowedModes = new Set(["driving", "walking", "cycling"]);
+    if (typeof origin !== "string" || typeof destination !== "string" ||
+        origin.trim().length < 3 || origin.trim().length > 160 ||
+        destination.trim().length < 3 || destination.trim().length > 160 ||
+        !allowedModes.has(mode)) {
       return res.status(400).json({
         success: false,
-        message: "Origin and destination are required",
+        message: "Origin, destination, and travel mode are invalid",
       });
     }
 
@@ -183,11 +209,16 @@ router.get("/directions", async (req, res) => {
 router.post("/save-location", auth, async (req, res) => {
   try {
     const { name, lat, lng, address } = req.body;
-
-    if (!name || !lat || !lng) {
+    const parsedLat = strictNumber(lat);
+    const parsedLng = strictNumber(lng);
+    if (typeof name !== "string" || name.trim().length < 2 ||
+        name.trim().length > 80 || parsedLat === null ||
+        parsedLat < -90 || parsedLat > 90 || parsedLng === null ||
+        parsedLng < -180 || parsedLng > 180 ||
+        (address !== undefined && (typeof address !== "string" || address.length > 500))) {
       return res.status(400).json({
         success: false,
-        message: "Name, latitude, and longitude are required",
+        message: "Invalid location name or coordinates",
       });
     }
 
@@ -195,7 +226,7 @@ router.post("/save-location", auth, async (req, res) => {
     let locationAddress = address;
     if (!locationAddress) {
       try {
-        const rev = await freeMapService.reverseGeocode(parseFloat(lat), parseFloat(lng));
+      const rev = await freeMapService.reverseGeocode(parsedLat, parsedLng);
         locationAddress = rev.formatted_address;
       } catch (err) {
         locationAddress = `${lat}, ${lng}`;
@@ -210,8 +241,8 @@ router.post("/save-location", auth, async (req, res) => {
         freeMapService.calculateDistance(
           dest.coordinates.lat,
           dest.coordinates.lng,
-          parseFloat(lat),
-          parseFloat(lng)
+          parsedLat,
+          parsedLng
         ) < 0.1
     );
 
@@ -223,8 +254,8 @@ router.post("/save-location", auth, async (req, res) => {
     }
 
     user.savedDestinations.push({
-      name,
-      coordinates: { lat: parseFloat(lat), lng: parseFloat(lng) },
+      name: name.trim(),
+      coordinates: { lat: parsedLat, lng: parsedLng },
       address: locationAddress,
     });
 

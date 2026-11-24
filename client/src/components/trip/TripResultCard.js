@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { tripAPI } from "../../services/api";
 import {
@@ -19,14 +20,10 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
   const [imageError, setImageError] = useState(false);
   const [isAddingTrip, setIsAddingTrip] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const handleDownloadPDF = () => {
-    toast.success(
-      "Generating PDF... This feature will download your trip itinerary!"
-    );
-    // TODO: Implement PDF generation
-    // This would typically call an API endpoint that generates a PDF
-    // Example: window.open(`/api/trips/download-pdf/${tripId}`, '_blank');
+    toast.error("PDF download is not available for generated itineraries");
   };
 
   const handleAddTrip = async () => {
@@ -34,6 +31,10 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
       setIsAddingTrip(true);
 
       // Prepare trip data for saving
+      const destinationText = itinerary.destination || formValues.destination || "";
+      const parts = destinationText.split(",");
+      const city = parts[0]?.trim() || destinationText.trim();
+      const country = parts[1]?.trim() || city;
       const tripData = {
         title: `Trip to ${itinerary.destination || formValues.destination}`,
         description:
@@ -41,25 +42,35 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
           `${formValues.duration} day trip to ${
             itinerary.destination || formValues.destination
           }`,
-        destination: itinerary.destination || formValues.destination,
+        destination: {
+          city,
+          country,
+        },
         startDate: formValues.startDate,
         endDate: formValues.endDate,
-        duration: itinerary.duration,
-        travelers: formValues.travelers,
-        budget: {
-          min: itinerary.totalEstimatedCost?.amount || 0,
-          max: itinerary.totalEstimatedCost?.amount || 0,
-          currency: itinerary.totalEstimatedCost?.currency || "INR",
+        preferences: {
+          duration: Number(itinerary.duration) || 1,
+          groupSize: Number(formValues.travelers) || 1,
+          budget: {
+            min: itinerary.totalEstimatedCost?.amount || 0,
+            max: itinerary.totalEstimatedCost?.amount || 0,
+            currency: itinerary.totalEstimatedCost?.currency || "INR",
+          },
+          interests: formValues.interests || [],
+          travelStyle: formValues.travelStyle || "budget",
+          accommodation: formValues.accommodationType || "hotel",
+          transport: formValues.transportation ? [formValues.transportation] : [],
         },
-        interests: formValues.interests || [],
-        travelStyle: formValues.travelStyle,
-        accommodation: formValues.accommodationType,
-        transport: formValues.transportation ? [formValues.transportation] : [],
         specialRequests: formValues.specialRequests || "",
         itinerary: {
-          dailyPlans: itinerary.itinerary || [],
-          recommendations: itinerary.recommendations || {},
-          totalEstimatedCost: itinerary.totalEstimatedCost,
+          generatedBy: "AI",
+          generatedAt: new Date(),
+          days: itinerary.itinerary || [],
+          totalCost: {
+            amount: itinerary.totalEstimatedCost?.amount || 0,
+            currency: itinerary.totalEstimatedCost?.currency || "INR",
+          },
+          summary: itinerary.recommendations?.summary || "",
         },
         // Generated trips should have status "upcoming"
         status: "upcoming",
@@ -68,6 +79,8 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
       const response = await tripAPI.createTrip(tripData);
 
       if (response.data.success) {
+        await queryClient.invalidateQueries({ queryKey: ["trips"] });
+        await queryClient.invalidateQueries({ queryKey: ["userTrips"] });
         toast.success("Trip added successfully!");
         navigate("/trips");
       }
@@ -135,7 +148,7 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="relative overflow-hidden rounded-2xl shadow-2xl bg-surface border border-border max-w-4xl mx-auto"
+      className="relative overflow-hidden rounded-lg shadow-medium bg-surface border border-border max-w-4xl mx-auto"
     >
       {/* Hero Image */}
       <div className="relative h-80 overflow-hidden">
@@ -149,7 +162,7 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
 
         {/* Destination Badge */}
         <div className="absolute top-4 right-4 md:left-4 md:right-auto">
-          <div className="bg-white/95 backdrop-blur-sm px-2 md:px-4 py-1 md:py-2 rounded-full shadow-lg">
+          <div className="bg-surface px-2 md:px-4 py-1 md:py-2 rounded-full shadow-soft">
             <div className="flex items-center gap-2">
               <FaMapMarkerAlt className="text-red-500" />
               <span className="font-semibold text-gray-900">
@@ -183,7 +196,7 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
       <div className="p-3 md:p-8">
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-2 md:p-4 rounded-xl text-center">
+          <div className="bg-surface-elevated p-2 md:p-4 rounded-lg text-center">
             <FaCalendarAlt className="h-5 w-5 md:h-6 md:w-6 mx-auto text-accent mb-2" />
             <p className="text-xl md:text-2xl font-bold text-text-primary">
               {itinerary.duration}
@@ -191,8 +204,8 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
             <p className="text-sm text-gray-600 dark:text-gray-400">Days</p>
           </div>
 
-          <div className="bg-purple-50 dark:bg-purple-900/20 p-2 md:p-4 rounded-xl text-center">
-            <FaUsers className="h-5 w-5 md:h-6 md:w-6 mx-auto text-purple-600 mb-2" />
+          <div className="bg-surface-elevated p-2 md:p-4 rounded-lg text-center">
+            <FaUsers className="h-5 w-5 md:h-6 md:w-6 mx-auto text-accent-secondary mb-2" />
             <p className="text-xl md:text-2xl font-bold text-text-primary">
               {formValues.travelers}
             </p>
@@ -201,7 +214,7 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
             </p>
           </div>
 
-          <div className="bg-green-50 dark:bg-green-900/20 p-2 md:p-4 rounded-xl text-center">
+          <div className="bg-surface-elevated p-2 md:p-4 rounded-lg text-center">
             <FaRupeeSign className="h-5 w-5 md:h-6 md:w-6 mx-auto text-green-600 mb-2" />
             <p className="text-xl md:text-2xl font-bold text-text-primary">
               ₹{formatCurrency(itinerary.totalEstimatedCost?.amount)}
@@ -211,7 +224,7 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
             </p>
           </div>
 
-          <div className="bg-orange-50 dark:bg-orange-900/20 p-2 md:p-4 rounded-xl text-center">
+          <div className="bg-surface-elevated p-2 md:p-4 rounded-lg text-center">
             <FaStar className="h-5 w-5 md:h-6 md:w-6 mx-auto text-orange-600 mb-2" />
             <p className="text-xl md:text-2xl font-bold text-text-primary">
               {itinerary.itinerary?.length || 0}
@@ -261,7 +274,7 @@ const TripResultCard = ({ itinerary, formValues, onViewDetails }) => {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={onViewDetails}
-          className="w-full bg-accent text-bg hover:brightness-110 font-semibold py-3 md:py-4 px-4 md:px-6 rounded-md transition-all shadow-glow flex items-center justify-center gap-2 md:gap-3 group text-sm md:text-base"
+          className="w-full bg-accent text-bg hover:bg-accent-hover font-semibold py-3 md:py-4 px-4 md:px-6 rounded-md transition-colors flex items-center justify-center gap-2 md:gap-3 group text-sm md:text-base"
         >
           <FaEye />
           <span className="text-lg">View Full Trip Details</span>

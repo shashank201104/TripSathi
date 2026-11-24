@@ -7,8 +7,11 @@ const rateLimit = require("express-rate-limit");
 const cookieParser = require("cookie-parser");
 const http = require("http");
 const socketIo = require("socket.io");
-const path = require("path");
 require("dotenv").config();
+const tokenManager = require("./utils/tokens");
+const Trip = require("./models/Trip");
+const User = require("./models/User");
+const path = require("path");
 
 // Import middleware
 const security = require("./middleware/security");
@@ -37,10 +40,41 @@ const io = socketIo(server, {
 });
 
 // Socket.IO connection handling
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+    if (!token) {
+      return next(new Error("Authentication required"));
+    }
+
+    const decoded = tokenManager.verifyAccessToken(token);
+    const user = await User.findOne({ _id: decoded.id, isActive: true }).select("_id");
+    if (!user) {
+      return next(new Error("Invalid user"));
+    }
+
+    socket.user = user;
+    next();
+  } catch (error) {
+    next(new Error("Invalid authentication"));
+  }
+});
+
 io.on("connection", (socket) => {
   logger.info("User connected:", { socketId: socket.id });
 
-  socket.on("join-trip", (tripId) => {
+  socket.on("join-trip", async (tripId) => {
+    if (typeof tripId !== "string" || !mongoose.Types.ObjectId.isValid(tripId)) {
+      socket.emit("trip-error", { message: "Invalid trip identifier" });
+      return;
+    }
+
+    const trip = await Trip.findOne({ _id: tripId, user: socket.user._id }).select("_id");
+    if (!trip) {
+      socket.emit("trip-error", { message: "Trip not found or access denied" });
+      return;
+    }
+
     socket.join(`trip-${tripId}`);
     logger.info("User joined trip room:", { socketId: socket.id, tripId });
   });
@@ -50,8 +84,36 @@ io.on("connection", (socket) => {
     logger.info("User left trip room:", { socketId: socket.id, tripId });
   });
 
-  socket.on("trip-update", (data) => {
-    socket.to(`trip-${data.tripId}`).emit("trip-updated", data);
+  socket.on("trip-update", async (data) => {
+    if (!data || typeof data !== "object" || typeof data.tripId !== "string") {
+      socket.emit("trip-error", { message: "Invalid trip update" });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(data.tripId)) {
+      socket.emit("trip-error", { message: "Invalid trip identifier" });
+      return;
+    }
+
+    const trip = await Trip.findOne({ _id: data.tripId, user: socket.user._id }).select("_id");
+    if (!trip || !socket.rooms.has(`trip-${data.tripId}`)) {
+      socket.emit("trip-error", { message: "Trip not found or access denied" });
+      return;
+    }
+
+    const allowedTypes = new Set(["title", "description", "itinerary", "status"]);
+    if (!allowedTypes.has(data.type)) {
+      socket.emit("trip-error", { message: "Invalid update type" });
+      return;
+    }
+
+    const sanitized = {
+      tripId: data.tripId,
+      tripName: typeof data.tripName === "string" ? data.tripName.slice(0, 100) : "",
+      type: data.type,
+    };
+
+    socket.to(`trip-${data.tripId}`).emit("trip-updated", sanitized);
     logger.info("Trip update broadcasted:", {
       tripId: data.tripId,
       type: data.type,
@@ -169,7 +231,15 @@ app.use((err, req, res, next) => {
     method: req.method,
     ip: req.ip,
     userAgent: req.get("User-Agent"),
-    body: req.body,
+    body: (() => {
+      const sensitive = new Set(["password", "currentPassword", "newPassword", "confirmPassword", "refreshToken", "accessToken", "token"]);
+      const scrub = (value) => {
+        if (!value || typeof value !== "object") return value;
+        if (Array.isArray(value)) return value.map(scrub);
+        return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, sensitive.has(key) ? "[REDACTED]" : scrub(item)]));
+      };
+      return scrub(req.body);
+    })(),
     params: req.params,
     query: req.query,
     user: req.user?.id,
@@ -223,9 +293,8 @@ app.use((err, req, res, next) => {
     message:
       process.env.NODE_ENV === "production"
         ? "Internal server error"
-        : err.message,
+        : "An internal error occurred",
     errorId,
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 });
 
@@ -296,7 +365,7 @@ const connectDB = async () => {
     });
   } catch (error) {
     logger.error("MongoDB connection failed:", error);
-    process.exit(1);
+    throw error;
   }
 };
 

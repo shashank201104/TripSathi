@@ -6,8 +6,6 @@ import { FaTwitter, FaInstagram, FaLinkedin, FaShieldAlt, FaRocket } from "react
 const Footer = () => {
   return (
     <footer className="relative bg-surface border-t border-border py-10 lg:py-16 overflow-hidden">
-      <div className="absolute inset-0 bg-grid-pattern bg-grid opacity-30 pointer-events-none" />
-
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -24,10 +22,17 @@ const Footer = () => {
               Your intelligent travel companion. Plan smarter, explore better.
             </p>
             <div className="hidden md:flex gap-3">
-              {[FaTwitter, FaInstagram, FaLinkedin].map((Icon, i) => (
+              {[
+                { Icon: FaTwitter, label: "Twitter", href: "https://twitter.com/" },
+                { Icon: FaInstagram, label: "Instagram", href: "https://instagram.com/" },
+                { Icon: FaLinkedin, label: "LinkedIn", href: "https://linkedin.com/" },
+              ].map(({ Icon, label, href }) => (
                 <a
-                  key={i}
-                  href="#"
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={label}
                   className="w-10 h-10 rounded-lg bg-surface-elevated border border-border flex items-center justify-center text-text-secondary hover:text-accent hover:border-accent/30 transition-all"
                 >
                   <Icon className="h-4 w-4" />

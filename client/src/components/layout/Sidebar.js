@@ -84,7 +84,7 @@ const Sidebar = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsMobileOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            className="fixed inset-0 bg-black/60 z-40 lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -92,7 +92,7 @@ const Sidebar = () => {
       <div
         className={`
           fixed lg:relative top-0 left-0 z-40
-          h-full w-72
+          h-full w-64
           bg-surface border-r border-border
           flex flex-col
           transition-transform duration-300 ease-in-out
@@ -127,7 +127,7 @@ const Sidebar = () => {
           <Link
             to="/trip-planner"
             onClick={() => setIsMobileOpen(false)}
-            className="w-full flex items-center justify-center px-4 py-3 rounded-md text-sm font-semibold text-bg bg-accent hover:brightness-110 transition-all shadow-glow"
+            className="w-full flex items-center justify-center px-4 py-3 rounded-md text-sm font-semibold text-bg bg-accent hover:bg-accent-hover transition-colors"
           >
             <FaPlane className="mr-2 h-4 w-4" />
             Plan New Trip

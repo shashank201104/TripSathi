@@ -4,14 +4,14 @@ import { twMerge } from "tailwind-merge";
 
 const buttonVariants = {
   primary:
-    "bg-accent text-bg font-semibold hover:brightness-110 shadow-glow border border-accent/20",
+    "bg-accent text-bg font-semibold hover:bg-accent-hover border border-transparent",
   secondary:
     "bg-surface-elevated text-text-primary border border-border hover:border-accent/30 hover:bg-accent-muted",
   success:
-    "bg-success text-white hover:brightness-110 border border-success/20",
-  danger: "bg-error text-white hover:brightness-110 border border-error/20",
+    "bg-success text-white hover:brightness-110 border border-transparent",
+  danger: "bg-error text-white hover:brightness-110 border border-transparent",
   warning:
-    "bg-warning text-bg hover:brightness-110 border border-warning/20",
+    "bg-warning text-bg hover:brightness-110 border border-transparent",
   outline:
     "border border-border text-text-primary bg-transparent hover:bg-accent-muted hover:border-accent/40",
   ghost: "text-accent hover:bg-accent-muted border border-transparent",
@@ -37,7 +37,7 @@ export const Button = ({
   ...props
 }) => {
   const baseClasses =
-    "inline-flex items-center justify-center font-medium rounded-md transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex items-center justify-center font-medium rounded-md transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:opacity-50 disabled:cursor-not-allowed";
 
   const classes = twMerge(
     baseClasses,
@@ -50,8 +50,8 @@ export const Button = ({
 
   const motionProps = animate
     ? {
-        whileHover: { scale: disabled || loading ? 1 : 1.02 },
-        whileTap: { scale: disabled || loading ? 1 : 0.98 },
+        whileHover: { scale: disabled || loading ? 1 : 1.01 },
+        whileTap: { scale: disabled || loading ? 1 : 0.99 },
         transition: { type: "spring", stiffness: 300, damping: 25 },
       }
     : {};
@@ -111,7 +111,7 @@ export const Input = ({
   ...props
 }) => {
   const inputClasses = twMerge(
-    "block w-full px-3 py-2 md:py-3 text-sm md:text-base border border-border rounded-md bg-surface-elevated text-text-primary shadow-sm placeholder-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/50 transition-theme min-h-[40px] md:min-h-[44px]",
+    "block w-full px-3 py-2 md:py-3 text-sm md:text-base border border-border rounded-md bg-surface text-text-primary placeholder-text-secondary/70 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-theme min-h-[40px] md:min-h-[44px]",
     error && "border-error/50 focus:ring-error/30 focus:border-error",
     Icon && iconPosition === "left" && "pl-8 md:pl-10",
     (Icon && iconPosition === "right") || rightElement ? "pr-10" : "",
@@ -121,7 +121,7 @@ export const Input = ({
   return (
     <div className={wrapperClassName}>
       {label && (
-        <label className="block text-xs font-mono font-medium text-text-secondary uppercase tracking-wider mb-2">
+        <label         className="block text-xs font-medium text-text-secondary uppercase tracking-[0.12em] mb-2">
           {label}
         </label>
       )}
@@ -217,7 +217,7 @@ export const Modal = ({
     >
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-black/60 transition-opacity"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -304,7 +304,7 @@ export const Badge = ({
   return (
     <span
       className={twMerge(
-        "inline-flex items-center font-mono font-medium rounded-full",
+        "inline-flex items-center font-medium tracking-wide rounded-full",
         variantClasses[variant],
         sizeClasses[size],
         className
@@ -357,7 +357,7 @@ export const PageHeader = ({ title, subtitle, badge, actions, className = "" }) 
     <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
       <div>
         {badge && <div className="mb-2">{badge}</div>}
-        <h1 className="text-2xl md:text-3xl font-display font-bold text-text-primary">
+        <h1 className="text-3xl md:text-4xl font-display font-normal text-text-primary">
           {title}
         </h1>
         {subtitle && (
